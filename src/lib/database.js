@@ -1,5 +1,10 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const { v4: uuidv4 } = require('uuid');
+
+// Return DATE (1082) and TIMESTAMP (1114) and TIMESTAMPTZ (1184) as strings, not Date objects
+types.setTypeParser(1082, (val) => val); // DATE -> 'YYYY-MM-DD'
+types.setTypeParser(1114, (val) => val); // TIMESTAMP
+types.setTypeParser(1184, (val) => val); // TIMESTAMPTZ
 
 let pool = null;
 
