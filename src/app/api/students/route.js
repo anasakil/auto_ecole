@@ -1,0 +1,69 @@
+import { NextResponse } from 'next/server';
+const db = require('@/lib/database');
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (id) {
+      const student = await db.getStudentById(Number(id));
+      if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+      return NextResponse.json(student);
+    }
+
+    const students = await db.getAllStudents();
+    return NextResponse.json(students);
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(request) {
+  try {
+    const data = await request.json();
+    const result = await db.createStudent(data);
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = Number(searchParams.get('id'));
+    const data = await request.json();
+
+    if (data.action === 'markLicenseObtained') {
+      await db.markLicenseObtained(id, data.licenseType, data.dateObtained);
+      return NextResponse.json({ success: true });
+    }
+
+    if (data.action === 'updateFollowUp') {
+      await db.updateStudentFollowUp(id, data);
+      return NextResponse.json({ success: true });
+    }
+
+    if (data.action === 'updateImage') {
+      await db.updateStudentImage(id, data.field, data.imagePath);
+      return NextResponse.json({ success: true });
+    }
+
+    await db.updateStudent(id, data);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = Number(searchParams.get('id'));
+    await db.deleteStudent(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

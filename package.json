@@ -1,0 +1,32 @@
+{
+  "name": "auto-ecole-maroc-web",
+  "version": "1.0.0",
+  "description": "Application web de gestion d'auto-école au Maroc",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "bcryptjs": "^3.0.3",
+    "cookie": "^1.1.1",
+    "html5-qrcode": "^2.3.8",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^1.4.5-lts.1",
+    "next": "^14.2.20",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.20.0",
+    "qrcode": "^1.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17"
+  }
+}
