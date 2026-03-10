@@ -3,8 +3,15 @@ import { NextResponse } from 'next/server';
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow login page and auth API
-  if (pathname === '/login' || pathname.startsWith('/api/auth') || pathname.startsWith('/_next') || pathname.startsWith('/favicon')) {
+  // Allow login page, auth API, init API, static files
+  if (
+    pathname === '/login' ||
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/init') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/fonts')
+  ) {
     return NextResponse.next();
   }
 
@@ -12,20 +19,32 @@ export function middleware(request) {
   const token = request.cookies.get('auth_token')?.value;
 
   if (!token) {
-    // Redirect to login for page requests
     if (!pathname.startsWith('/api/')) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
-    // Return 401 for API requests
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   }
 
-  // Basic JWT structure check (full verification happens in API routes)
+  // Verify JWT structure and decode payload to check expiry
   try {
     const parts = token.split('.');
     if (parts.length !== 3) throw new Error('Invalid token');
+
+    // Decode payload (base64) and check expiry
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const now = Math.floor(Date.now() / 1000);
+
+    if (!payload.exp || payload.exp < now) {
+      throw new Error('Token expired');
+    }
+
+    if (!payload.id || !payload.username) {
+      throw new Error('Invalid payload');
+    }
+
     return NextResponse.next();
   } catch {
+    // Clear invalid cookie and redirect
     if (!pathname.startsWith('/api/')) {
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.set('auth_token', '', { maxAge: 0, path: '/' });
@@ -36,5 +55,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!_next|favicon.ico).*)'],
 };

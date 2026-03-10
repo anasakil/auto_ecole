@@ -101,22 +101,6 @@ function StatsCard({
     );
   };
 
-  if (loading) {
-    return (
-      <div className={`bg-white rounded-xl shadow-sm border border-gray-100 ${sizeConfig.padding} ${className}`}>
-        <div className="animate-pulse">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="h-3 bg-gray-200 rounded w-20"></div>
-              <div className="h-8 bg-gray-200 rounded w-16"></div>
-            </div>
-            <div className={`${sizeConfig.icon} bg-gray-200 rounded-xl`}></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={`
@@ -129,7 +113,11 @@ function StatsCard({
       <div className="flex items-center justify-between">
         <div className="min-w-0">
           <p className={`text-gray-500 font-medium ${sizeConfig.title}`}>{title}</p>
-          <p className={`font-bold text-gray-900 mt-1 ${sizeConfig.value}`}>{value}</p>
+          {loading ? (
+            <div className="animate-pulse h-8 bg-gray-200 rounded w-16 mt-1" />
+          ) : (
+            <p className={`font-bold text-gray-900 mt-1 ${sizeConfig.value}`}>{value}</p>
+          )}
 
           {trend !== undefined && (
             <div className={`flex items-center gap-1 mt-2 ${getTrendColor()}`}>

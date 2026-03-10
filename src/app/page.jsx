@@ -4,17 +4,36 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import api from '@/utils/api';
 import { Card, Badge } from '@/components/ui';
-import { LoadingSpinner, Alert } from '@/components/feedback';
 import { PageHeader } from '@/components/layout/index';
 import { StatsCard, EmptyState } from '@/components/data';
 import { formatDate, formatCurrency, formatDuration } from '@/utils/helpers';
-import { DashboardSkeleton } from '@/components/skeletons';
+
+function SkeletonValue({ width = 'w-16', height = 'h-8' }) {
+  return <div className={`animate-pulse bg-gray-200 rounded ${width} ${height}`} />;
+}
+
+function SkeletonText({ width = 'w-24', height = 'h-4' }) {
+  return <div className={`animate-pulse bg-gray-200 rounded ${width} ${height}`} />;
+}
+
+function SkeletonListItem() {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+      <div className="space-y-1.5">
+        <SkeletonText width="w-32" />
+        <SkeletonText width="w-24" height="h-3" />
+      </div>
+      <SkeletonText width="w-20" height="h-6" />
+    </div>
+  );
+}
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [timeStats, setTimeStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -22,32 +41,22 @@ function Dashboard() {
 
   async function loadStats() {
     try {
+      setLoading(true);
+      setError(false);
       const [data, alertsData, timeStatsData] = await Promise.all([
         api.dashboard.getStats(),
         api.alerts.getAll(),
         api.stages.getSessionTimeStats(),
       ]);
       setStats(data);
-      setAlerts(alertsData.slice(0, 8)); // Show top 8 alerts
+      setAlerts(alertsData.slice(0, 8));
       setTimeStats(timeStatsData);
-    } catch (error) {
-      console.error('Error loading stats:', error);
+    } catch (err) {
+      console.error('Error loading stats:', err);
+      setError(true);
     } finally {
       setLoading(false);
     }
-  }
-
-  if (loading) {
-    return <DashboardSkeleton />;
-  }
-
-  if (!stats) {
-    return (
-      <EmptyState.Error
-        message="Erreur de chargement des statistiques"
-        onRetry={loadStats}
-      />
-    );
   }
 
   const alertsSeverityStyles = {
@@ -74,7 +83,8 @@ function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatsCard
           title="Total Étudiants"
-          value={stats.totalStudents}
+          value={loading ? null : stats?.totalStudents}
+          loading={loading}
           color="primary"
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,7 +94,8 @@ function Dashboard() {
         />
         <StatsCard
           title="En Formation"
-          value={stats.activeStudents}
+          value={loading ? null : stats?.activeStudents}
+          loading={loading}
           color="success"
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,7 +105,8 @@ function Dashboard() {
         />
         <StatsCard
           title="Permis Obtenus"
-          value={stats.licensesObtained}
+          value={loading ? null : stats?.licensesObtained}
+          loading={loading}
           color="warning"
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +116,8 @@ function Dashboard() {
         />
         <StatsCard
           title="Présents Aujourd'hui"
-          value={stats.todayAttendance}
+          value={loading ? null : stats?.todayAttendance}
+          loading={loading}
           color="info"
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,92 +131,122 @@ function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="border-l-4 border-green-500">
           <p className="text-sm text-gray-500 mb-1">Revenus Totaux</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
+          {loading ? <SkeletonValue width="w-32" /> : (
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(stats?.totalRevenue)}</p>
+          )}
         </Card>
         <Card className="border-l-4 border-blue-500">
           <p className="text-sm text-gray-500 mb-1">Revenus du Mois</p>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.monthlyRevenue)}</p>
+          {loading ? <SkeletonValue width="w-32" /> : (
+            <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats?.monthlyRevenue)}</p>
+          )}
         </Card>
         <Card className="border-l-4 border-orange-500">
           <p className="text-sm text-gray-500 mb-1">Paiements en Attente</p>
-          <p className="text-2xl font-bold text-orange-600">{stats.pendingPayments}</p>
+          {loading ? <SkeletonValue width="w-16" /> : (
+            <p className="text-2xl font-bold text-orange-600">{stats?.pendingPayments}</p>
+          )}
         </Card>
       </div>
 
       {/* Session Time Stats */}
-      {timeStats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="border-l-4 border-emerald-500">
-            <p className="text-sm text-gray-500 mb-1">Temps Aujourd'hui</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-emerald-600">
-                {formatDuration(timeStats.day?.completed_minutes)}
-              </span>
-              <span className="text-sm text-gray-400">terminé</span>
-            </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-sm font-medium text-blue-600">
-                {formatDuration(timeStats.day?.planned_minutes)}
-              </span>
-              <span className="text-xs text-gray-400">planifié</span>
-            </div>
-          </Card>
-          <Card className="border-l-4 border-indigo-500">
-            <p className="text-sm text-gray-500 mb-1">Temps cette Semaine</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-indigo-600">
-                {formatDuration(timeStats.week?.completed_minutes)}
-              </span>
-              <span className="text-sm text-gray-400">terminé</span>
-            </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-sm font-medium text-blue-600">
-                {formatDuration(timeStats.week?.planned_minutes)}
-              </span>
-              <span className="text-xs text-gray-400">planifié</span>
-            </div>
-          </Card>
-          <Card className="border-l-4 border-violet-500">
-            <p className="text-sm text-gray-500 mb-1">Temps ce Mois</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-violet-600">
-                {formatDuration(timeStats.month?.completed_minutes)}
-              </span>
-              <span className="text-sm text-gray-400">terminé</span>
-            </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-sm font-medium text-blue-600">
-                {formatDuration(timeStats.month?.planned_minutes)}
-              </span>
-              <span className="text-xs text-gray-400">planifié</span>
-            </div>
-          </Card>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="border-l-4 border-emerald-500">
+          <p className="text-sm text-gray-500 mb-1">Temps Aujourd'hui</p>
+          {loading ? <SkeletonValue width="w-24" height="h-6" /> : (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-emerald-600">
+                  {formatDuration(timeStats?.day?.completed_minutes)}
+                </span>
+                <span className="text-sm text-gray-400">terminé</span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-sm font-medium text-blue-600">
+                  {formatDuration(timeStats?.day?.planned_minutes)}
+                </span>
+                <span className="text-xs text-gray-400">planifié</span>
+              </div>
+            </>
+          )}
+        </Card>
+        <Card className="border-l-4 border-indigo-500">
+          <p className="text-sm text-gray-500 mb-1">Temps cette Semaine</p>
+          {loading ? <SkeletonValue width="w-24" height="h-6" /> : (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-indigo-600">
+                  {formatDuration(timeStats?.week?.completed_minutes)}
+                </span>
+                <span className="text-sm text-gray-400">terminé</span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-sm font-medium text-blue-600">
+                  {formatDuration(timeStats?.week?.planned_minutes)}
+                </span>
+                <span className="text-xs text-gray-400">planifié</span>
+              </div>
+            </>
+          )}
+        </Card>
+        <Card className="border-l-4 border-violet-500">
+          <p className="text-sm text-gray-500 mb-1">Temps ce Mois</p>
+          {loading ? <SkeletonValue width="w-24" height="h-6" /> : (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-violet-600">
+                  {formatDuration(timeStats?.month?.completed_minutes)}
+                </span>
+                <span className="text-sm text-gray-400">terminé</span>
+              </div>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-sm font-medium text-blue-600">
+                  {formatDuration(timeStats?.month?.planned_minutes)}
+                </span>
+                <span className="text-xs text-gray-400">planifié</span>
+              </div>
+            </>
+          )}
+        </Card>
+      </div>
 
       {/* Alerts Section */}
-      {alerts.length > 0 && (
-        <Card className="mb-6">
-          <Card.Header
-            title={
-              <div className="flex items-center">
-                <svg className="w-6 h-6 text-orange-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                <span>Alertes ({stats.alertsCounts?.total || alerts.length})</span>
-                {stats.alertsCounts?.danger > 0 && (
-                  <Badge variant="danger" size="sm" className="ml-2">
-                    {stats.alertsCounts.danger} urgentes
-                  </Badge>
-                )}
+      <Card className="mb-6">
+        <Card.Header
+          title={
+            <div className="flex items-center">
+              <svg className="w-6 h-6 text-orange-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <span>Alertes {!loading && `(${stats?.alertsCounts?.total || alerts.length})`}</span>
+              {!loading && stats?.alertsCounts?.danger > 0 && (
+                <Badge variant="danger" size="sm" className="ml-2">
+                  {stats.alertsCounts.danger} urgentes
+                </Badge>
+              )}
+            </div>
+          }
+          action={
+            <Link href="/alerts" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+              Voir tout
+            </Link>
+          }
+        />
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="p-3 rounded-lg border-l-4 border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <SkeletonText width="w-28" />
+                    <SkeletonText width="w-48" />
+                  </div>
+                  <SkeletonText width="w-16" height="h-3" />
+                </div>
               </div>
-            }
-            action={
-              <Link href="/alerts" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                Voir tout
-              </Link>
-            }
-          />
+            ))}
+          </div>
+        ) : alerts.length > 0 ? (
           <div className="space-y-2">
             {alerts.slice(0, 5).map((alert, index) => (
               <div
@@ -222,11 +265,13 @@ function Dashboard() {
               </div>
             ))}
           </div>
-        </Card>
-      )}
+        ) : (
+          <p className="text-gray-500 text-sm text-center py-4">Aucune alerte</p>
+        )}
+      </Card>
 
       {/* Today's Stages */}
-      {stats.todayStages && stats.todayStages.length > 0 && (
+      {!loading && stats?.todayStages && stats.todayStages.length > 0 && (
         <Card className="mb-6 border-l-4 border-green-500">
           <Card.Header
             title={
@@ -274,10 +319,12 @@ function Dashboard() {
             }
           />
           <div className="space-y-3">
-            {stats.recentStudents.length === 0 ? (
+            {loading ? (
+              [...Array(5)].map((_, i) => <SkeletonListItem key={i} />)
+            ) : stats?.recentStudents?.length === 0 ? (
               <p className="text-gray-500 text-sm text-center py-4">Aucun étudiant</p>
             ) : (
-              stats.recentStudents.map((student, index) => (
+              stats?.recentStudents?.map((student) => (
                 <Link
                   key={student.id}
                   href={`/students/${student.id}`}
@@ -307,10 +354,12 @@ function Dashboard() {
             }
           />
           <div className="space-y-3">
-            {stats.recentPayments.length === 0 ? (
+            {loading ? (
+              [...Array(5)].map((_, i) => <SkeletonListItem key={i} />)
+            ) : stats?.recentPayments?.length === 0 ? (
               <p className="text-gray-500 text-sm text-center py-4">Aucun paiement</p>
             ) : (
-              stats.recentPayments.map((payment) => (
+              stats?.recentPayments?.map((payment) => (
                 <div key={payment.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                   <div>
                     <p className="font-medium text-gray-900">{payment.full_name}</p>
@@ -326,7 +375,7 @@ function Dashboard() {
         </Card>
 
         {/* Upcoming Reminders */}
-        {stats.upcomingReminders.length > 0 && (
+        {!loading && stats?.upcomingReminders?.length > 0 && (
           <Card className="lg:col-span-2">
             <Card.Header title="Rappels à Venir" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -352,6 +401,15 @@ function Dashboard() {
           </Card>
         )}
       </div>
+
+      {error && !loading && (
+        <div className="mt-4">
+          <EmptyState.Error
+            message="Erreur de chargement des statistiques"
+            onRetry={loadStats}
+          />
+        </div>
+      )}
     </div>
   );
 }
