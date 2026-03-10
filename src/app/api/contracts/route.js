@@ -6,7 +6,8 @@ import path from 'path';
 const db = require('@/lib/database');
 
 function getUploadsDir(subfolder = '') {
-  const uploadsDir = path.join(process.cwd(), 'uploads', subfolder);
+  const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(base, subfolder);
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }

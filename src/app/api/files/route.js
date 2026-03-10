@@ -4,7 +4,8 @@ import { existsSync } from 'fs';
 import path from 'path';
 
 function getUploadsDir(subfolder = '') {
-  const uploadsDir = path.join(process.cwd(), 'uploads', subfolder);
+  const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
+  const uploadsDir = path.join(base, subfolder);
   if (!existsSync(uploadsDir)) {
     require('fs').mkdirSync(uploadsDir, { recursive: true });
   }
@@ -52,9 +53,15 @@ export async function GET(request) {
       return NextResponse.json({ error: 'No file path provided' }, { status: 400 });
     }
 
-    const fullPath = path.join(process.cwd(), filePath);
+    // Try both local uploads and /tmp (Vercel)
+    let fullPath = path.join(process.cwd(), filePath);
     if (!existsSync(fullPath)) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      const tmpPath = filePath.replace(/^uploads/, '/tmp');
+      if (existsSync(tmpPath)) {
+        fullPath = tmpPath;
+      } else {
+        return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      }
     }
 
     const fileBuffer = await readFile(fullPath);
