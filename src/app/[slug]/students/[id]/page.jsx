@@ -17,10 +17,12 @@ import {
   formatDuration,
 } from '@/utils/helpers';
 import { DetailPageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 function StudentDetail() {
   const { id } = useParams();
   const router = useRouter();
+  const { slug } = useTenant();
   const qrCanvasRef = useRef(null);
   const profileFileRef = useRef(null);
   const cinFileRef = useRef(null);
@@ -154,11 +156,11 @@ function StudentDetail() {
           setCinDocumentData(cinData);
         }
       } else {
-        router.push('/students');
+        router.push(`/${slug}/students`);
       }
     } catch (error) {
       console.error('Error loading student:', error);
-      router.push('/students');
+      router.push(`/${slug}/students`);
     } finally {
       setLoading(false);
     }
@@ -614,7 +616,7 @@ function StudentDetail() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Link href="/students" className="btn btn-secondary">
+          <Link href={`/${slug}/students`} className="btn btn-secondary">
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>

@@ -2,13 +2,13 @@
 import React from 'react';
 
 const variants = {
-  success: 'bg-green-100 text-green-800 border-green-200',
-  warning: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  danger: 'bg-red-100 text-red-800 border-red-200',
-  info: 'bg-blue-100 text-blue-800 border-blue-200',
-  gray: 'bg-gray-100 text-gray-800 border-gray-200',
-  primary: 'bg-primary-100 text-primary-800 border-primary-200',
-  purple: 'bg-purple-100 text-purple-800 border-purple-200',
+  success: 'bg-accent-green/10 text-accent-green border-accent-green/20',
+  warning: 'bg-accent-yellow/10 text-amber-700 border-accent-yellow/20',
+  danger: 'bg-accent-red/10 text-accent-red border-accent-red/20',
+  info: 'bg-accent-blue/10 text-blue-700 border-accent-blue/20',
+  gray: 'bg-surface-200 text-dark-light border-surface-300',
+  primary: 'bg-primary-500/10 text-primary-600 border-primary-500/20',
+  purple: 'bg-primary-500/10 text-primary-600 border-primary-500/20',
   orange: 'bg-orange-100 text-orange-800 border-orange-200',
 };
 

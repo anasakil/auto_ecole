@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
     const data = await res.json();
     if (data.success) {
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     }
     return { success: false, error: data.error };
   }

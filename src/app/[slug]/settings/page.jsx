@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import { FormPageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 function Settings() {
   const [settings, setSettings] = useState({
@@ -15,10 +16,14 @@ function Settings() {
     commercial_register: '',
     city: '',
     fax: '',
+    logo: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+  const { slug } = useTenant();
 
   useEffect(() => {
     loadSettings();
@@ -38,7 +43,14 @@ function Settings() {
           commercial_register: data.commercial_register || '',
           city: data.city || '',
           fax: data.fax || '',
+          logo: data.logo || '',
         });
+        if (data.logo) {
+          try {
+            const imgData = await api.files.getBase64(data.logo);
+            if (imgData) setLogoPreview(imgData);
+          } catch {}
+        }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -51,7 +63,20 @@ function Settings() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.settings.update(settings);
+      let updatedSettings = { ...settings };
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append('file', logoFile);
+        formData.append('subfolder', 'logos');
+        const uploadRes = await fetch('/api/files', { method: 'POST', body: formData });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          updatedSettings.logo = uploadData.path;
+          setSettings(prev => ({ ...prev, logo: uploadData.path }));
+        }
+      }
+      await api.settings.update(updatedSettings);
+      setLogoFile(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
@@ -60,6 +85,17 @@ function Settings() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleLogoChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 2 * 1024 * 1024) return;
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoPreview(ev.target.result);
+    reader.readAsDataURL(file);
   }
 
   function handleChange(e) {
@@ -147,6 +183,36 @@ function Settings() {
                 className="form-input"
                 placeholder="Ex: Casablanca"
               />
+            </div>
+          </div>
+
+          {/* Logo */}
+          <div className="card mb-6">
+            <h2 className="card-header">Logo</h2>
+            <div className="flex items-center gap-6">
+              <div className="flex-shrink-0">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="w-20 h-20 rounded-xl object-contain border border-gray-200 bg-gray-50 p-1" />
+                ) : (
+                  <div className="w-20 h-20 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="btn btn-secondary cursor-pointer">
+                  {logoPreview ? 'Changer le logo' : 'Choisir un logo'}
+                  <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+                </label>
+                <p className="text-xs text-gray-400 mt-2">PNG, JPG ou SVG. Max 2 Mo.</p>
+                {logoPreview && (
+                  <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); setSettings(prev => ({ ...prev, logo: '' })); }} className="text-xs text-red-500 hover:text-red-700 mt-1">
+                    Supprimer le logo
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

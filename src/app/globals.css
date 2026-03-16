@@ -9,8 +9,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #f3f4f6;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #F0F0F8;
+  color: #2D3047;
 }
 
 /* Custom scrollbar */
@@ -53,23 +54,23 @@ body {
 
 /* Table styles */
 .table-container {
-  @apply overflow-x-auto bg-white rounded-lg shadow;
+  @apply overflow-x-auto bg-white rounded-2xl shadow-soft;
 }
 
 .data-table {
-  @apply min-w-full divide-y divide-gray-200;
+  @apply min-w-full divide-y divide-surface-200;
 }
 
 .data-table th {
-  @apply px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50;
+  @apply px-4 py-3 text-left text-xs font-semibold text-primary-500 uppercase tracking-wider bg-surface-50;
 }
 
 .data-table td {
-  @apply px-4 py-3 whitespace-nowrap text-sm text-gray-900;
+  @apply px-4 py-3 whitespace-nowrap text-sm text-dark;
 }
 
 .data-table tbody tr:hover {
-  @apply bg-gray-50;
+  @apply bg-surface-50;
 }
 
 /* Status badges */
@@ -78,23 +79,27 @@ body {
 }
 
 .badge-success {
-  @apply bg-green-100 text-green-800;
+  background-color: rgba(0, 184, 148, 0.1);
+  color: #00B894;
 }
 
 .badge-warning {
-  @apply bg-yellow-100 text-yellow-800;
+  background-color: rgba(253, 203, 110, 0.1);
+  color: #B8860B;
 }
 
 .badge-danger {
-  @apply bg-red-100 text-red-800;
+  background-color: rgba(255, 107, 107, 0.1);
+  color: #FF6B6B;
 }
 
 .badge-info {
-  @apply bg-blue-100 text-blue-800;
+  background-color: rgba(116, 185, 255, 0.1);
+  color: #2D6CB8;
 }
 
 .badge-gray {
-  @apply bg-gray-100 text-gray-800;
+  @apply bg-gray-100 text-gray-600;
 }
 
 /* Form styles */
@@ -107,36 +112,38 @@ body {
 }
 
 .form-input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+  @apply w-full px-3 py-2 border border-surface-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-colors;
 }
 
 .form-select {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white;
+  @apply w-full px-3 py-2 border border-surface-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 bg-white transition-colors;
 }
 
 .form-textarea {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
+  @apply w-full px-3 py-2 border border-surface-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-colors;
 }
 
 /* Button styles */
 .btn {
-  @apply inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors;
+  @apply inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all;
 }
 
 .btn-primary {
-  @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  @apply bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-400;
 }
 
 .btn-secondary {
-  @apply bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500 border-gray-300;
+  @apply bg-white text-dark-light hover:bg-surface-50 focus:ring-primary-400 border-surface-300;
 }
 
 .btn-success {
-  @apply bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+  @apply text-white hover:opacity-90 focus:ring-green-500;
+  background-color: #00B894;
 }
 
 .btn-danger {
-  @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  @apply text-white hover:opacity-90 focus:ring-red-500;
+  background-color: #FF6B6B;
 }
 
 .btn-sm {
@@ -145,24 +152,24 @@ body {
 
 /* Card styles */
 .card {
-  @apply bg-white rounded-lg shadow p-6;
+  @apply bg-white rounded-2xl shadow-soft p-6;
 }
 
 .card-header {
-  @apply text-lg font-semibold text-gray-900 mb-4;
+  @apply text-lg font-semibold text-dark mb-4;
 }
 
 /* Modal styles */
 .modal-overlay {
-  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+  @apply fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50;
 }
 
 .modal-content {
-  @apply bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto;
+  @apply bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto;
 }
 
 .modal-header {
-  @apply px-6 py-4 border-b border-gray-200;
+  @apply px-6 py-4 border-b border-surface-200;
 }
 
 .modal-body {
@@ -170,7 +177,7 @@ body {
 }
 
 .modal-footer {
-  @apply px-6 py-4 border-t border-gray-200 flex justify-end gap-3;
+  @apply px-6 py-4 border-t border-surface-200 flex justify-end gap-3;
 }
 
 /* QR Scanner styles */

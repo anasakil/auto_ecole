@@ -7,7 +7,7 @@ export function middleware(request) {
   if (
     pathname === '/login' ||
     pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/api/init') ||
+    (pathname.startsWith('/api/init') && process.env.NODE_ENV !== 'production') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
     pathname.startsWith('/fonts')
@@ -40,6 +40,38 @@ export function middleware(request) {
 
     if (!payload.id || !payload.username) {
       throw new Error('Invalid payload');
+    }
+
+    // Role-based route protection
+    if (pathname.startsWith('/super-admin')) {
+      // Only super_admin can access /super-admin routes
+      if (payload.role !== 'super_admin') {
+        if (payload.slug) {
+          return NextResponse.redirect(new URL(`/${payload.slug}`, request.url));
+        }
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+    } else if (pathname === '/') {
+      // Root redirect based on role
+      if (payload.role === 'super_admin') {
+        return NextResponse.redirect(new URL('/super-admin', request.url));
+      } else if (payload.slug) {
+        return NextResponse.redirect(new URL(`/${payload.slug}`, request.url));
+      }
+    } else if (!pathname.startsWith('/api/')) {
+      // For tenant routes like /some-slug/students
+      // Extract the slug from URL
+      const urlSlug = pathname.split('/')[1];
+      // Skip if it's super-admin (already handled above)
+      if (urlSlug && urlSlug !== 'super-admin' && urlSlug !== 'login') {
+        // If not super_admin, verify slug matches
+        if (payload.role !== 'super_admin' && payload.slug !== urlSlug) {
+          if (payload.slug) {
+            return NextResponse.redirect(new URL(`/${payload.slug}`, request.url));
+          }
+          return NextResponse.redirect(new URL('/login', request.url));
+        }
+      }
     }
 
     return NextResponse.next();

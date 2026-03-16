@@ -1,19 +1,30 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'auto-ecole-secret-key-change-in-production-2026';
 const TOKEN_EXPIRY = '7d';
+
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET environment variable is required');
+  return secret;
+}
 
 function generateToken(admin) {
   return jwt.sign(
-    { id: admin.id, username: admin.username },
-    JWT_SECRET,
+    {
+      id: admin.id,
+      username: admin.username,
+      role: admin.role || 'admin',
+      auto_ecole_id: admin.auto_ecole_id || null,
+      slug: admin.slug || null,
+    },
+    getJwtSecret(),
     { expiresIn: TOKEN_EXPIRY }
   );
 }
 
 function verifyToken(token) {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, getJwtSecret());
   } catch {
     return null;
   }

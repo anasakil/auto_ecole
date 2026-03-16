@@ -10,21 +10,25 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  // Check if already logged in
   useEffect(() => {
     fetch('/api/auth')
       .then(r => r.json())
       .then(data => {
-        if (data.authenticated) router.replace('/');
+        if (data.authenticated) redirectUser(data.user);
       })
       .catch(() => {});
   }, [router]);
+
+  function redirectUser(user) {
+    if (user.role === 'super_admin') router.replace('/super-admin');
+    else if (user.slug) router.replace(`/${user.slug}`);
+    else router.replace('/');
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
@@ -32,12 +36,8 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-
-      if (data.success) {
-        router.replace('/');
-      } else {
-        setError(data.error || 'Identifiants invalides');
-      }
+      if (data.success) redirectUser(data.user);
+      else setError(data.error || 'Identifiants invalides');
     } catch {
       setError('Erreur de connexion au serveur');
     } finally {
@@ -46,49 +46,54 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 flex items-center justify-center p-4">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #5A4BD1 40%, #4834D4 70%, #3B22B8 100%)' }}
+    >
+      {/* Decorative blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-[300px] h-[300px] bg-accent-pink/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Logo Card */}
+        {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/15 backdrop-blur-sm rounded-2xl mb-4 shadow-xl border border-white/10">
             <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-white mb-1">Auto-École</h1>
-          <p className="text-primary-200 text-sm">Système de gestion</p>
+          <p className="text-white/50 text-sm">Système de gestion</p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Connexion</h2>
-            <p className="text-sm text-gray-500 mt-1">Entrez vos identifiants pour accéder au tableau de bord</p>
+            <h2 className="text-xl font-semibold text-dark">Connexion</h2>
+            <p className="text-sm text-dark-muted mt-1">Entrez vos identifiants pour accéder au tableau de bord</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 animate-shake">
-              <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm text-red-700">{error}</span>
+            <div className="mb-4 p-3 bg-accent-red/5 border border-accent-red/20 rounded-xl flex items-center gap-2 animate-shake">
+              <div className="w-8 h-8 rounded-lg bg-accent-red/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <span className="text-sm text-accent-red font-medium">{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Nom d'utilisateur
+              <label className="block text-sm font-medium text-dark-light mb-1.5">
+                Nom d&apos;utilisateur
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-dark-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
@@ -96,7 +101,7 @@ export default function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm bg-gray-50 focus:bg-white"
+                  className="w-full pl-11 pr-4 py-3 border border-surface-300 rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all text-sm bg-surface-50 focus:bg-white"
                   placeholder="Entrez votre nom d'utilisateur"
                   required
                   autoFocus
@@ -106,12 +111,12 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-dark-light mb-1.5">
                 Mot de passe
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-dark-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
@@ -119,7 +124,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-sm bg-gray-50 focus:bg-white"
+                  className="w-full pl-11 pr-12 py-3 border border-surface-300 rounded-xl focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 transition-all text-sm bg-surface-50 focus:bg-white"
                   placeholder="Entrez votre mot de passe"
                   required
                   autoComplete="current-password"
@@ -127,7 +132,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-dark-muted hover:text-dark-light transition-colors"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +151,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 disabled:bg-primary-400 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40"
+              className="w-full py-3 px-4 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', boxShadow: '0 8px 24px rgba(108, 92, 231, 0.35)' }}
             >
               {loading ? (
                 <>
@@ -168,7 +174,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-primary-200 text-xs mt-6">
+        <p className="text-center text-white/30 text-xs mt-6">
           Auto-École Maroc &copy; {new Date().getFullYear()}
         </p>
       </div>

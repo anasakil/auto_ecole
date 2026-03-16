@@ -6,6 +6,7 @@ import api from '@/utils/api';
 import Modal from '@/components/Modal';
 import { formatDate, formatCurrency } from '@/utils/helpers';
 import { TablePageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 function ObtenirPermis() {
   const [students, setStudents] = useState([]);
@@ -20,6 +21,7 @@ function ObtenirPermis() {
   const [selectedOffer, setSelectedOffer] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
   const [sentOffers, setSentOffers] = useState([]);
+  const { slug } = useTenant();
 
   useEffect(() => {
     loadData();
@@ -227,7 +229,7 @@ Auto-École`);
                 <tr key={student.id}>
                   <td>
                     <Link
-                      href={`/students/${student.id}`}
+                      href={`/${slug}/students/${student.id}`}
                       className="font-medium text-primary-600 hover:text-primary-700"
                     >
                       {student.full_name}
@@ -267,7 +269,7 @@ Auto-École`);
                         Envoyer Offre
                       </button>
                       <Link
-                        href={`/students/${student.id}`}
+                        href={`/${slug}/students/${student.id}`}
                         className="btn btn-secondary btn-sm"
                         title="Voir détails"
                       >
@@ -303,7 +305,7 @@ Auto-École`);
           ))}
           {offers.length === 0 && (
             <div className="col-span-full text-center py-8 text-gray-500">
-              Aucune offre disponible. <Link href="/offers" className="text-primary-600 hover:underline">Créer une offre</Link>
+              Aucune offre disponible. <Link href={`/${slug}/offers`} className="text-primary-600 hover:underline">Créer une offre</Link>
             </div>
           )}
         </div>

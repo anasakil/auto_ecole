@@ -12,10 +12,10 @@ function Alert({
   className = '',
 }) {
   const styles = {
-    info: { container: 'bg-blue-50 border-blue-400 text-blue-800', icon: 'text-blue-500', button: 'text-blue-600 hover:bg-blue-100' },
-    success: { container: 'bg-green-50 border-green-400 text-green-800', icon: 'text-green-500', button: 'text-green-600 hover:bg-green-100' },
-    warning: { container: 'bg-yellow-50 border-yellow-400 text-yellow-800', icon: 'text-yellow-500', button: 'text-yellow-600 hover:bg-yellow-100' },
-    error: { container: 'bg-red-50 border-red-400 text-red-800', icon: 'text-red-500', button: 'text-red-600 hover:bg-red-100' },
+    info: { container: 'bg-accent-blue/5 border-accent-blue text-blue-800', icon: 'text-accent-blue', button: 'text-accent-blue hover:bg-accent-blue/10' },
+    success: { container: 'bg-accent-green/5 border-accent-green text-green-800', icon: 'text-accent-green', button: 'text-accent-green hover:bg-accent-green/10' },
+    warning: { container: 'bg-accent-yellow/5 border-accent-yellow text-amber-800', icon: 'text-accent-yellow', button: 'text-accent-yellow hover:bg-accent-yellow/10' },
+    error: { container: 'bg-accent-red/5 border-accent-red text-red-800', icon: 'text-accent-red', button: 'text-accent-red hover:bg-accent-red/10' },
   };
 
   const defaultIcons = {
@@ -28,7 +28,7 @@ function Alert({
   const style = styles[type];
 
   return (
-    <div className={`flex items-start p-4 rounded-lg border-l-4 ${style.container} ${className}`} role="alert">
+    <div className={`flex items-start p-4 rounded-xl border-l-4 ${style.container} ${className}`} role="alert">
       <span className={`flex-shrink-0 ${style.icon}`}>{icon || defaultIcons[type]}</span>
       <div className="ml-3 flex-1 min-w-0">
         {title && <p className="font-semibold text-sm mb-1">{title}</p>}

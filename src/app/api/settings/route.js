@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 const db = require('@/lib/database');
+const { requireTenant } = require('@/lib/tenant');
 
-export async function GET() {
+export async function GET(request) {
   try {
-    return NextResponse.json(await db.getSettings());
+    const tenant = await requireTenant(request);
+    if (!tenant) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+
+    return NextResponse.json(await db.getSettings(tenant.autoEcoleId));
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -11,8 +15,11 @@ export async function GET() {
 
 export async function PUT(request) {
   try {
+    const tenant = await requireTenant(request);
+    if (!tenant) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+
     const data = await request.json();
-    await db.updateSettings(data);
+    await db.updateSettings(tenant.autoEcoleId, data);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

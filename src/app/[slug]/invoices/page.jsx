@@ -7,6 +7,7 @@ import Modal from '@/components/Modal';
 import ExportButton from '@/components/ExportButton';
 import { formatDate, formatCurrency, getTodayISO } from '@/utils/helpers';
 import { TablePageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 const INVOICE_STATUS = [
   { value: 'Émise', label: 'Émise', color: 'badge-info' },
@@ -15,6 +16,7 @@ const INVOICE_STATUS = [
 ];
 
 function Invoices() {
+  const { slug } = useTenant();
   const [invoices, setInvoices] = useState([]);
   const [students, setStudents] = useState([]);
   const [allPayments, setAllPayments] = useState([]);
@@ -385,7 +387,7 @@ function Invoices() {
                     <td>{formatDate(invoice.issue_date)}</td>
                     <td>
                       <Link
-                        href={`/students/${invoice.student_id}`}
+                        href={`/${slug}/students/${invoice.student_id}`}
                         className="font-medium text-primary-600 hover:text-primary-700"
                       >
                         {invoice.full_name}

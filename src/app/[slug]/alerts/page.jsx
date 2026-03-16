@@ -6,6 +6,7 @@ import api from '@/utils/api';
 import ExportButton from '@/components/ExportButton';
 import { formatDate } from '@/utils/helpers';
 import { CardPageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 const SEVERITY_STYLES = {
   danger: { bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-700', icon: 'text-red-500' },
@@ -26,6 +27,7 @@ const ALERT_ICONS = {
 };
 
 function Alerts() {
+  const { slug } = useTenant();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterSeverity, setFilterSeverity] = useState('');
@@ -204,7 +206,7 @@ function Alerts() {
                     <p className="text-gray-600 mt-1">{alert.message}</p>
                     {alert.student_id && (
                       <Link
-                        href={`/students/${alert.student_id}`}
+                        href={`/${slug}/students/${alert.student_id}`}
                         className="inline-block mt-2 text-sm text-primary-600 hover:text-primary-700"
                       >
                         Voir le profil

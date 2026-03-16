@@ -8,6 +8,7 @@ import { formatCurrency, LICENSE_TYPES } from '@/utils/helpers';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirmDialog } from '@/contexts/ConfirmContext';
 import { CardPageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 function Offers() {
   const [offers, setOffers] = useState([]);
@@ -19,6 +20,7 @@ function Offers() {
 
   const toast = useToast();
   const { confirmDelete } = useConfirmDialog();
+  const { slug } = useTenant();
 
   const [formData, setFormData] = useState({
     name: '',

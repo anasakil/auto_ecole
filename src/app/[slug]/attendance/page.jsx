@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import api from '@/utils/api';
 import { formatDate, getStatusBadgeClass } from '@/utils/helpers';
+import { useTenant } from '@/contexts/TenantContext';
 
 function Attendance() {
   const [students, setStudents] = useState([]);
@@ -19,6 +20,7 @@ function Attendance() {
   const todayAttendanceRef = useRef([]);
   const lastScanRef = useRef({ code: null, timestamp: 0 });
   const isProcessingRef = useRef(false);
+  const { slug } = useTenant();
 
   useEffect(() => {
     loadData();

@@ -103,11 +103,11 @@ function Modal({
   };
 
   const iconColors = {
-    primary: 'bg-primary-100 text-primary-600',
-    success: 'bg-green-100 text-green-600',
-    warning: 'bg-yellow-100 text-yellow-600',
-    danger: 'bg-red-100 text-red-600',
-    info: 'bg-blue-100 text-blue-600',
+    primary: 'bg-primary-500/10 text-primary-500',
+    success: 'bg-accent-green/10 text-accent-green',
+    warning: 'bg-accent-yellow/10 text-accent-yellow',
+    danger: 'bg-accent-red/10 text-accent-red',
+    info: 'bg-accent-blue/10 text-accent-blue',
   };
 
   if (!shouldRender || !mounted) return null;
@@ -124,7 +124,7 @@ function Modal({
     >
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-gray-900 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200 ${
           isAnimating ? 'opacity-60' : 'opacity-0'
         }`}
       />
@@ -145,7 +145,7 @@ function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              className="absolute top-4 right-4 p-2 text-dark-muted hover:text-dark hover:bg-surface-100 rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               aria-label="Fermer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,18 +161,18 @@ function Modal({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h2 id="modal-title" className="text-xl font-semibold text-gray-900 leading-tight">
+              <h2 id="modal-title" className="text-xl font-semibold text-dark leading-tight">
                 {title}
               </h2>
               {subtitle && (
-                <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+                <p className="mt-1 text-sm text-dark-muted">{subtitle}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-surface-200 to-transparent" />
 
         {/* Body */}
         <div className="px-6 py-5 max-h-[calc(100vh-16rem)] overflow-y-auto custom-scrollbar">
@@ -182,8 +182,8 @@ function Modal({
         {/* Footer */}
         {footer && (
           <>
-            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-            <div className="px-6 py-4 bg-gray-50 rounded-b-2xl">
+            <div className="h-px bg-gradient-to-r from-transparent via-surface-200 to-transparent" />
+            <div className="px-6 py-4 bg-surface-50 rounded-b-2xl">
               {footer}
             </div>
           </>
@@ -207,7 +207,7 @@ Modal.Section = function ModalSection({ title, children, className = '' }) {
   return (
     <div className={`mb-6 last:mb-0 ${className}`}>
       {title && (
-        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-dark mb-3 flex items-center gap-2">
           {title}
         </h3>
       )}

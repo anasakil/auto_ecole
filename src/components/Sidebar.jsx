@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenant } from '@/contexts/TenantContext';
 import api from '@/utils/api';
 
-const menuItems = [
-  { path: '/', label: 'Tableau de bord', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+const menuPaths = [
+  { path: '', label: 'Tableau de bord', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { path: '/students', label: 'Étudiants', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
   { path: '/attendance', label: 'Scanner QR', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
   { path: '/presences-absences', label: 'Présences/Absences', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
@@ -22,8 +23,14 @@ const menuItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { logout, user } = useAuth();
+  const { slug } = useTenant();
   const [alertCounts, setAlertCounts] = useState({ total: 0, danger: 0 });
   const [collapsed, setCollapsed] = useState(false);
+
+  const menuItems = menuPaths.map(item => ({
+    ...item,
+    fullPath: `/${slug}${item.path}`,
+  }));
 
   useEffect(() => {
     api.alerts.getCounts().then(setAlertCounts).catch(() => {});
@@ -34,72 +41,128 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+    <aside
+      className={`flex flex-col transition-all duration-300 ${
+        collapsed ? 'w-[72px]' : 'w-64'
+      }`}
+      style={{
+        background: 'linear-gradient(180deg, #6C5CE7 0%, #4834D4 100%)',
+      }}
+    >
+      {/* Logo */}
+      <div className={`flex items-center ${collapsed ? 'justify-center p-4' : 'justify-between px-5 py-5'}`}>
         {!collapsed && (
           <div>
-            <h1 className="text-lg font-bold text-primary-600">Auto-École</h1>
-            <p className="text-xs text-gray-500">Gestion des étudiants</p>
+            <h1 className="text-lg font-bold text-white">Auto-École</h1>
+            <p className="text-xs text-white/60">Gestion des étudiants</p>
           </div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={collapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'} />
-          </svg>
-        </button>
+        {collapsed && (
+          <div className="w-11 h-11 rounded-[14px] bg-white/20 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">AE</span>
+          </div>
+        )}
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(true)}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 py-4 overflow-y-auto">
-        {menuItems.map((item) => {
-          const isActive = item.path === '/' ? pathname === '/' : pathname.startsWith(item.path);
-          return (
-            <Link
-              key={item.path}
-              href={item.path}
-              className={`flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              }`}
-              title={collapsed ? item.label : undefined}
+      {/* Separator */}
+      <div className={`mx-auto bg-white/15 h-px ${collapsed ? 'w-10' : 'w-[calc(100%-40px)]'}`} />
+
+      {/* Navigation */}
+      <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-2 px-3.5">
+            <button
+              onClick={() => setCollapsed(false)}
+              className="w-11 h-11 rounded-xl hover:bg-white/10 flex items-center justify-center text-white/70 transition-colors mb-2"
             >
-              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
               </svg>
-              {!collapsed && (
-                <span className="flex-1">{item.label}</span>
-              )}
-              {!collapsed && item.path === '/alerts' && alertCounts.total > 0 && (
-                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
-                  alertCounts.danger > 0 ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {alertCounts.total}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+            </button>
+            {menuItems.map((item) => {
+              const isActive = item.path === ''
+                ? pathname === `/${slug}`
+                : pathname.startsWith(item.fullPath);
+              return (
+                <Link
+                  key={item.fullPath}
+                  href={item.fullPath}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
+                    isActive
+                      ? 'bg-white/20 text-white shadow-lg'
+                      : 'text-white/65 hover:bg-white/10 hover:text-white/90'
+                  }`}
+                  title={item.label}
+                >
+                  <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                  </svg>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1 px-3">
+            {menuItems.map((item) => {
+              const isActive = item.path === ''
+                ? pathname === `/${slug}`
+                : pathname.startsWith(item.fullPath);
+              return (
+                <Link
+                  key={item.fullPath}
+                  href={item.fullPath}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-white/20 text-white shadow-lg'
+                      : 'text-white/65 hover:bg-white/10 hover:text-white/90'
+                  }`}
+                >
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+                  </svg>
+                  <span className="flex-1">{item.label}</span>
+                  {item.path === '/alerts' && alertCounts.total > 0 && (
+                    <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                      alertCounts.danger > 0
+                        ? 'bg-red-400/30 text-white'
+                        : 'bg-yellow-400/30 text-white'
+                    }`}>
+                      {alertCounts.total}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
-      {/* User section with logout */}
-      <div className="border-t border-gray-200 p-3">
+      {/* User section */}
+      <div className="border-t border-white/15 p-3">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user?.username || 'Admin'}</p>
-              <p className="text-xs text-gray-500">Administrateur</p>
+              <p className="text-sm font-medium text-white truncate">{user?.username || 'Admin'}</p>
+              <p className="text-xs text-white/50">Administrateur</p>
             </div>
             <button
               onClick={logout}
-              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors"
               title="Déconnexion"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,15 +171,17 @@ export default function Sidebar() {
             </button>
           </div>
         ) : (
-          <button
-            onClick={logout}
-            className="w-full p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors flex justify-center"
-            title="Déconnexion"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <div className="flex justify-center">
+            <button
+              onClick={logout}
+              className="w-11 h-11 rounded-xl hover:bg-white/10 text-white/50 hover:text-white transition-colors flex items-center justify-center"
+              title="Déconnexion"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
     </aside>

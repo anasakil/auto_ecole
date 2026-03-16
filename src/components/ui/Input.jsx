@@ -26,7 +26,7 @@ const Input = forwardRef(({
 
       <div className="relative">
         {icon && iconPosition === 'left' && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-dark-muted">
             {icon}
           </div>
         )}
@@ -38,15 +38,15 @@ const Input = forwardRef(({
             form-input
             ${icon && iconPosition === 'left' ? 'pl-10' : ''}
             ${icon && iconPosition === 'right' ? 'pr-10' : ''}
-            ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
-            ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
+            ${hasError ? 'border-accent-red focus:border-accent-red focus:ring-accent-red/30' : ''}
+            ${disabled ? 'bg-surface-100 cursor-not-allowed' : ''}
             ${className}
           `}
           {...props}
         />
 
         {icon && iconPosition === 'right' && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-dark-muted">
             {icon}
           </div>
         )}

@@ -171,6 +171,7 @@ function DataTable({
                     <td
                       key={column.key}
                       className={`px-4 ${compact ? 'py-2' : 'py-3'} text-sm text-gray-700 ${column.cellClassName || ''}`}
+                      onClick={column.key === 'actions' ? (e) => e.stopPropagation() : undefined}
                     >
                       {column.render ? column.render(row[column.key], row, rowIndex) : row[column.key]}
                     </td>

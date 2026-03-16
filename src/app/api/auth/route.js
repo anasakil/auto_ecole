@@ -26,7 +26,13 @@ export async function POST(request) {
 
     const response = NextResponse.json({
       success: true,
-      user: { id: admin.id, username: admin.username },
+      user: {
+        id: admin.id,
+        username: admin.username,
+        role: admin.role || 'admin',
+        auto_ecole_id: admin.auto_ecole_id || null,
+        slug: admin.slug || null,
+      },
     });
 
     response.cookies.set('auth_token', token, {
@@ -50,7 +56,16 @@ export async function GET(request) {
     if (!user) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
-    return NextResponse.json({ authenticated: true, user });
+    return NextResponse.json({
+      authenticated: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role || 'admin',
+        auto_ecole_id: user.auto_ecole_id || null,
+        slug: user.slug || null,
+      },
+    });
   } catch {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }

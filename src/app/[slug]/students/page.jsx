@@ -15,6 +15,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useConfirmDialog } from '@/contexts/ConfirmContext';
 import { formatDate, formatCurrency, calculateRemainingDays } from '@/utils/helpers';
 import { TablePageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 function Students() {
   const [students, setStudents] = useState([]);
@@ -29,6 +30,7 @@ function Students() {
   const toast = useToast();
   const { confirmDelete } = useConfirmDialog();
   const router = useRouter();
+  const { slug } = useTenant();
 
   useEffect(() => {
     loadStudents();
@@ -37,22 +39,28 @@ function Students() {
   async function loadStudents() {
     try {
       const data = await api.students.getAll();
-      setStudents(data);
+      if (data.error) throw new Error(data.error);
+      setStudents(Array.isArray(data) ? data : []);
 
-      // Load profile images for all students
-      const images = {};
-      for (const student of data) {
-        if (student.profile_image) {
+      // Load profile images in parallel
+      const imagePromises = data
+        .filter(s => s.profile_image)
+        .map(async (student) => {
           try {
             const imageData = await api.files.getBase64(student.profile_image);
-            if (imageData) {
-              images[student.id] = imageData;
-            }
+            return { id: student.id, data: imageData };
           } catch (err) {
             console.error('Error loading image for student:', student.id, err);
+            return null;
           }
+        });
+      const imageResults = await Promise.allSettled(imagePromises);
+      const images = {};
+      imageResults.forEach(result => {
+        if (result.status === 'fulfilled' && result.value && result.value.data) {
+          images[result.value.id] = result.value.data;
         }
-      }
+      });
       setStudentImages(images);
     } catch (error) {
       console.error('Error loading students:', error);
@@ -218,7 +226,7 @@ function Students() {
       sortable: false,
       width: '60px',
       render: (_, student) => (
-        <Link href={`/students/${student.id}`}>
+        <Link href={`/${slug}/students/${student.id}`}>
           {studentImages[student.id] ? (
             <img
               src={studentImages[student.id]}
@@ -240,7 +248,7 @@ function Students() {
       header: 'Nom Complet',
       render: (value, student) => (
         <Link
-          href={`/students/${student.id}`}
+          href={`/${slug}/students/${student.id}`}
           className="font-medium text-primary-600 hover:text-primary-700"
         >
           {value}
@@ -310,7 +318,7 @@ function Students() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => router.push(`/students/${student.id}`)}
+            onClick={() => router.push(`/${slug}/students/${student.id}`)}
             title="Voir détails"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -487,7 +495,7 @@ function Students() {
           emptyState={
             <EmptyState.NoStudents onAction={handleAdd} />
           }
-          onRowClick={(student) => router.push(`/students/${student.id}`)}
+          onRowClick={(student) => router.push(`/${slug}/students/${student.id}`)}
           striped
           hoverable
         />

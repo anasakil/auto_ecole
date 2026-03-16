@@ -4,6 +4,7 @@ import fontkit from '@pdf-lib/fontkit';
 import fs from 'fs';
 import path from 'path';
 const db = require('@/lib/database');
+const { requireTenant } = require('@/lib/tenant');
 
 function getUploadsDir(subfolder = '') {
   const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
@@ -28,12 +29,15 @@ function drawTextCenter(page, text, centerX, y, font, size) {
 
 export async function POST(request) {
   try {
+    const tenant = await requireTenant(request);
+    if (!tenant) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+
     const { studentId, overrideData } = await request.json();
 
-    const student = await db.getStudentById(Number(studentId));
+    const student = await db.getStudentById(Number(studentId), tenant.autoEcoleId);
     if (!student) throw new Error('Étudiant non trouvé');
 
-    const settings = await db.getSettings();
+    const settings = await db.getSettings(tenant.autoEcoleId);
     const d = overrideData || {};
 
     const schoolName = d.school_name !== undefined ? d.school_name : (settings.school_name || '');
@@ -123,7 +127,7 @@ export async function POST(request) {
     fs.writeFileSync(filePath, pdfBytes);
 
     const relativePath = path.join('uploads', 'contracts', fileName);
-    const docRecord = await db.createDocument({
+    const docRecord = await db.createDocument(tenant.autoEcoleId, {
       student_id: studentId,
       type: 'Contrat',
       name: `Contrat - ${student.full_name}`,

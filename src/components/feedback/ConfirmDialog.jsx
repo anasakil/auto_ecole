@@ -17,9 +17,9 @@ function ConfirmDialog({
   if (!isOpen) return null;
 
   const typeStyles = {
-    default: { iconBg: 'bg-primary-100', iconColor: 'text-primary-600', confirmVariant: 'primary' },
-    danger: { iconBg: 'bg-red-100', iconColor: 'text-red-600', confirmVariant: 'danger' },
-    warning: { iconBg: 'bg-yellow-100', iconColor: 'text-yellow-600', confirmVariant: 'warning' },
+    default: { iconBg: 'bg-primary-500/10', iconColor: 'text-primary-500', confirmVariant: 'primary' },
+    danger: { iconBg: 'bg-accent-red/10', iconColor: 'text-accent-red', confirmVariant: 'danger' },
+    warning: { iconBg: 'bg-accent-yellow/10', iconColor: 'text-accent-yellow', confirmVariant: 'warning' },
   };
 
   const style = typeStyles[type];
@@ -32,16 +32,16 @@ function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-scaleIn" onClick={(e) => e.stopPropagation()}>
+        <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-scaleIn" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start gap-4">
-            <div className={`flex-shrink-0 w-12 h-12 rounded-full ${style.iconBg} ${style.iconColor} flex items-center justify-center`}>
+            <div className={`flex-shrink-0 w-12 h-12 rounded-xl ${style.iconBg} ${style.iconColor} flex items-center justify-center`}>
               {icon || defaultIcons[type]}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">{title}</h3>
-              <p className="text-sm text-gray-600">{message}</p>
+              <h3 className="text-lg font-semibold text-dark mb-1">{title}</h3>
+              <p className="text-sm text-dark-light">{message}</p>
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6">

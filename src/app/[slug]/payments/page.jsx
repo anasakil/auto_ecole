@@ -9,8 +9,10 @@ import { formatDate, formatCurrency, PAYMENT_METHODS, getTodayISO } from '@/util
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirmDialog } from '@/contexts/ConfirmContext';
 import { TablePageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 function Payments() {
+  const { slug } = useTenant();
   const [payments, setPayments] = useState([]);
   const [students, setStudents] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -296,7 +298,7 @@ function Payments() {
             {overduePayments.map((schedule) => (
               <div key={schedule.id} className="p-4 bg-white rounded-lg shadow-sm border border-red-200">
                 <div className="flex justify-between items-start mb-2">
-                  <Link href={`/students/${schedule.student_id}`} className="font-medium text-gray-900 hover:text-primary-600">
+                  <Link href={`/${slug}/students/${schedule.student_id}`} className="font-medium text-gray-900 hover:text-primary-600">
                     {schedule.full_name}
                   </Link>
                   <span className="text-red-600 font-bold">{formatCurrency(schedule.amount)}</span>
@@ -324,7 +326,7 @@ function Payments() {
             {upcomingPayments.slice(0, 6).map((schedule) => (
               <div key={schedule.id} className="p-4 bg-white rounded-lg shadow-sm border border-yellow-200">
                 <div className="flex justify-between items-start mb-2">
-                  <Link href={`/students/${schedule.student_id}`} className="font-medium text-gray-900 hover:text-primary-600">
+                  <Link href={`/${slug}/students/${schedule.student_id}`} className="font-medium text-gray-900 hover:text-primary-600">
                     {schedule.full_name}
                   </Link>
                   <span className="text-yellow-600 font-bold">{formatCurrency(schedule.amount)}</span>
@@ -373,7 +375,7 @@ function Payments() {
                   <div className="flex justify-between items-start">
                     <div>
                       <Link
-                        href={`/students/${student.id}`}
+                        href={`/${slug}/students/${student.id}`}
                         className="font-medium text-gray-900 hover:text-primary-600"
                       >
                         {student.full_name}
@@ -449,7 +451,7 @@ function Payments() {
                     <td>{formatDate(payment.payment_date)}</td>
                     <td>
                       <Link
-                        href={`/students/${payment.student_id}`}
+                        href={`/${slug}/students/${payment.student_id}`}
                         className="font-medium text-primary-600 hover:text-primary-700"
                       >
                         {payment.full_name}

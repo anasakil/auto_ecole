@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, readFile, unlink, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+const { requireAuth } = require('@/lib/tenant');
 
 function getUploadsDir(subfolder = '') {
   const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
@@ -19,14 +20,28 @@ function generateFileName(originalName) {
   return `${timestamp}-${random}${ext}`;
 }
 
+const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
 export async function POST(request) {
   try {
+    const auth = requireAuth(request);
+    if (!auth) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+
     const formData = await request.formData();
     const file = formData.get('file');
-    const subfolder = formData.get('subfolder') || 'documents';
+    const subfolder = (formData.get('subfolder') || 'documents').replace(/[^a-zA-Z0-9_-]/g, '');
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Type de fichier non autorisé' }, { status: 400 });
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: 'Fichier trop volumineux (max 5 Mo)' }, { status: 400 });
     }
 
     const uploadsDir = getUploadsDir(subfolder);
@@ -46,6 +61,9 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
+    const auth = requireAuth(request);
+    if (!auth) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const filePath = searchParams.get('path');
 
@@ -54,11 +72,22 @@ export async function GET(request) {
     }
 
     // Try both local uploads and /tmp (Vercel)
-    let fullPath = path.join(process.cwd(), filePath);
+    let fullPath = path.resolve(process.cwd(), filePath);
+
+    // Path traversal protection
+    const uploadsBase = path.resolve(process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads'));
+    if (!fullPath.startsWith(uploadsBase) && !fullPath.startsWith(path.resolve(process.cwd(), 'public'))) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
     if (!existsSync(fullPath)) {
       const tmpPath = filePath.replace(/^uploads/, '/tmp');
-      if (existsSync(tmpPath)) {
-        fullPath = tmpPath;
+      const resolvedTmpPath = path.resolve(tmpPath);
+      if (!resolvedTmpPath.startsWith('/tmp')) {
+        return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+      }
+      if (existsSync(resolvedTmpPath)) {
+        fullPath = resolvedTmpPath;
       } else {
         return NextResponse.json({ error: 'File not found' }, { status: 404 });
       }
@@ -81,6 +110,9 @@ export async function GET(request) {
 
 export async function DELETE(request) {
   try {
+    const auth = requireAuth(request);
+    if (!auth) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const filePath = searchParams.get('path');
 
@@ -88,7 +120,14 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'No file path provided' }, { status: 400 });
     }
 
-    const fullPath = path.join(process.cwd(), filePath);
+    const fullPath = path.resolve(process.cwd(), filePath);
+
+    // Path traversal protection
+    const uploadsBase = path.resolve(process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads'));
+    if (!fullPath.startsWith(uploadsBase) && !fullPath.startsWith(path.resolve(process.cwd(), 'public'))) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
     if (existsSync(fullPath)) {
       await unlink(fullPath);
     }

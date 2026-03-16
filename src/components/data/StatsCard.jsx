@@ -7,131 +7,88 @@ function StatsCard({
   icon,
   trend,
   trendLabel,
-  color = 'primary', // 'primary', 'success', 'warning', 'danger', 'info', 'gray'
-  size = 'md', // 'sm', 'md', 'lg'
+  color = 'primary',
+  size = 'md',
   loading = false,
   onClick,
   className = '',
+  gradient = false,
 }) {
   const colors = {
     primary: {
-      bg: 'bg-primary-50',
-      icon: 'bg-primary-100 text-primary-600',
-      text: 'text-primary-600',
+      icon: 'bg-primary-500/10 text-primary-500',
+      gradient: 'from-primary-500 to-primary-400',
     },
     success: {
-      bg: 'bg-green-50',
-      icon: 'bg-green-100 text-green-600',
-      text: 'text-green-600',
+      icon: 'bg-accent-green/10 text-accent-green',
+      gradient: 'from-accent-green to-emerald-300',
     },
     warning: {
-      bg: 'bg-yellow-50',
-      icon: 'bg-yellow-100 text-yellow-600',
-      text: 'text-yellow-600',
+      icon: 'bg-accent-yellow/10 text-accent-yellow',
+      gradient: 'from-accent-yellow to-amber-300',
     },
     danger: {
-      bg: 'bg-red-50',
-      icon: 'bg-red-100 text-red-600',
-      text: 'text-red-600',
+      icon: 'bg-accent-red/10 text-accent-red',
+      gradient: 'from-accent-red to-red-300',
     },
     info: {
-      bg: 'bg-blue-50',
-      icon: 'bg-blue-100 text-blue-600',
-      text: 'text-blue-600',
+      icon: 'bg-accent-blue/10 text-accent-blue',
+      gradient: 'from-accent-blue to-blue-300',
     },
     gray: {
-      bg: 'bg-gray-50',
-      icon: 'bg-gray-100 text-gray-600',
-      text: 'text-gray-600',
+      icon: 'bg-dark-muted/10 text-dark-muted',
+      gradient: 'from-gray-400 to-gray-300',
     },
   };
 
   const sizes = {
-    sm: {
-      padding: 'p-4',
-      icon: 'w-10 h-10',
-      iconInner: 'w-5 h-5',
-      value: 'text-xl',
-      title: 'text-xs',
-    },
-    md: {
-      padding: 'p-5',
-      icon: 'w-12 h-12',
-      iconInner: 'w-6 h-6',
-      value: 'text-2xl',
-      title: 'text-sm',
-    },
-    lg: {
-      padding: 'p-6',
-      icon: 'w-14 h-14',
-      iconInner: 'w-7 h-7',
-      value: 'text-3xl',
-      title: 'text-base',
-    },
+    sm: { padding: 'p-4', icon: 'w-10 h-10', iconInner: 'w-5 h-5', value: 'text-xl', title: 'text-xs' },
+    md: { padding: 'p-5', icon: 'w-11 h-11', iconInner: 'w-5 h-5', value: 'text-2xl', title: 'text-sm' },
+    lg: { padding: 'p-6', icon: 'w-14 h-14', iconInner: 'w-7 h-7', value: 'text-3xl', title: 'text-base' },
   };
 
   const colorConfig = colors[color];
   const sizeConfig = sizes[size];
 
-  const getTrendColor = () => {
-    if (trend > 0) return 'text-green-600';
-    if (trend < 0) return 'text-red-600';
-    return 'text-gray-500';
-  };
-
-  const getTrendIcon = () => {
-    if (trend > 0) {
-      return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-        </svg>
-      );
-    }
-    if (trend < 0) {
-      return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-        </svg>
-      );
-    }
+  if (gradient) {
     return (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
-      </svg>
+      <div
+        className={`bg-gradient-to-br ${colorConfig.gradient} rounded-2xl ${sizeConfig.padding} shadow-card ${onClick ? 'cursor-pointer hover:shadow-card-hover transition-shadow' : ''} ${className}`}
+        onClick={onClick}
+      >
+        <p className={`text-white/80 font-medium ${sizeConfig.title}`}>{title}</p>
+        {loading ? (
+          <div className="animate-pulse h-8 bg-white/20 rounded w-20 mt-2" />
+        ) : (
+          <p className={`font-bold text-white mt-1 ${sizeConfig.value}`}>{value}</p>
+        )}
+      </div>
     );
-  };
+  }
 
   return (
     <div
-      className={`
-        bg-white rounded-xl shadow-sm border border-gray-100 ${sizeConfig.padding}
-        ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}
-        ${className}
-      `}
+      className={`bg-white rounded-2xl shadow-soft ${sizeConfig.padding} ${onClick ? 'cursor-pointer hover:shadow-card-hover transition-shadow' : ''} ${className}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between">
         <div className="min-w-0">
-          <p className={`text-gray-500 font-medium ${sizeConfig.title}`}>{title}</p>
+          <p className={`text-dark-muted font-medium ${sizeConfig.title}`}>{title}</p>
           {loading ? (
-            <div className="animate-pulse h-8 bg-gray-200 rounded w-16 mt-1" />
+            <div className="animate-pulse h-8 bg-surface-200 rounded w-16 mt-1" />
           ) : (
-            <p className={`font-bold text-gray-900 mt-1 ${sizeConfig.value}`}>{value}</p>
+            <p className={`font-bold text-dark mt-1 ${sizeConfig.value}`}>{value}</p>
           )}
-
           {trend !== undefined && (
-            <div className={`flex items-center gap-1 mt-2 ${getTrendColor()}`}>
-              {getTrendIcon()}
-              <span className="text-sm font-medium">
-                {Math.abs(trend)}%
-              </span>
-              {trendLabel && (
-                <span className="text-gray-500 text-xs ml-1">{trendLabel}</span>
-              )}
+            <div className={`flex items-center gap-1 mt-2 ${trend > 0 ? 'text-accent-green' : trend < 0 ? 'text-accent-red' : 'text-dark-muted'}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={trend > 0 ? 'M5 10l7-7m0 0l7 7m-7-7v18' : trend < 0 ? 'M19 14l-7 7m0 0l-7-7m7 7V3' : 'M5 12h14'} />
+              </svg>
+              <span className="text-sm font-medium">{Math.abs(trend)}%</span>
+              {trendLabel && <span className="text-dark-muted text-xs ml-1">{trendLabel}</span>}
             </div>
           )}
         </div>
-
         {icon && (
           <div className={`flex-shrink-0 ${sizeConfig.icon} rounded-xl ${colorConfig.icon} flex items-center justify-center`}>
             <span className={sizeConfig.iconInner}>{icon}</span>
@@ -142,10 +99,9 @@ function StatsCard({
   );
 }
 
-// Stats grid container
 function StatsGrid({ children, columns = 4, className = '' }) {
   return (
-    <div className={`grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-${columns} ${className}`}>
+    <div className={`grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-${columns} ${className}`}>
       {children}
     </div>
   );

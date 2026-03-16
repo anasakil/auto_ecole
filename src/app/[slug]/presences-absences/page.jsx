@@ -6,6 +6,7 @@ import api from '@/utils/api';
 import { formatDate } from '@/utils/helpers';
 import ExportButton from '@/components/ExportButton';
 import { TablePageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 function PresencesAbsences() {
   const [students, setStudents] = useState([]);
@@ -14,6 +15,7 @@ function PresencesAbsences() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('daily'); // 'daily' or 'history'
+  const { slug } = useTenant();
 
   useEffect(() => {
     loadData();
@@ -108,7 +110,7 @@ function PresencesAbsences() {
             title={viewMode === 'history' ? 'Historique des Présences' : 'Présences du Jour'}
             subtitle={`Présents: ${presentCount} | Absents: ${absentCount}`}
           />
-          <Link href="/attendance" className="btn btn-primary">
+          <Link href={`/${slug}/attendance`} className="btn btn-primary">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
             </svg>
@@ -230,7 +232,7 @@ function PresencesAbsences() {
                         </div>
                         <div>
                           <Link
-                            href={`/students/${student.id}`}
+                            href={`/${slug}/students/${student.id}`}
                             className="font-medium text-gray-900 hover:text-primary-600"
                           >
                             {student.full_name}
@@ -286,7 +288,7 @@ function PresencesAbsences() {
                       </div>
                       <div>
                         <Link
-                          href={`/students/${student.id}`}
+                          href={`/${slug}/students/${student.id}`}
                           className="font-medium text-gray-900 hover:text-primary-600"
                         >
                           {student.full_name}
@@ -337,7 +339,7 @@ function PresencesAbsences() {
                     <tr key={record.id}>
                       <td>
                         <Link
-                          href={`/students/${record.student_id}`}
+                          href={`/${slug}/students/${record.student_id}`}
                           className="font-medium text-primary-600 hover:text-primary-700"
                         >
                           {record.full_name}

@@ -7,6 +7,7 @@ import Modal from '@/components/Modal';
 import ExportButton from '@/components/ExportButton';
 import { formatDate, getTodayISO, formatDuration } from '@/utils/helpers';
 import { CardPageSkeleton } from '@/components/skeletons';
+import { useTenant } from '@/contexts/TenantContext';
 
 const STAGE_TYPES = [
   { value: 'Séance', label: 'Séance de conduite' },
@@ -23,6 +24,7 @@ const STAGE_STATUS = [
 ];
 
 function Stages() {
+  const { slug } = useTenant();
   const [stages, setStages] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -261,7 +263,7 @@ function Stages() {
                   </span>
                 </div>
                 <h3 className="font-medium text-gray-900">{stage.title}</h3>
-                <Link href={`/students/${stage.student_id}`} className="text-sm text-primary-600 hover:underline">
+                <Link href={`/${slug}/students/${stage.student_id}`} className="text-sm text-primary-600 hover:underline">
                   {stage.full_name}
                 </Link>
                 <div className="mt-2 flex gap-2">
@@ -335,7 +337,7 @@ function Stages() {
                     </td>
                     <td className="font-medium">{stage.title}</td>
                     <td>
-                      <Link href={`/students/${stage.student_id}`} className="text-primary-600 hover:underline">
+                      <Link href={`/${slug}/students/${stage.student_id}`} className="text-primary-600 hover:underline">
                         {stage.full_name}
                       </Link>
                     </td>
@@ -392,7 +394,7 @@ function Stages() {
                     </td>
                     <td>{stage.title}</td>
                     <td>
-                      <Link href={`/students/${stage.student_id}`} className="text-primary-600 hover:underline">
+                      <Link href={`/${slug}/students/${stage.student_id}`} className="text-primary-600 hover:underline">
                         {stage.full_name}
                       </Link>
                     </td>

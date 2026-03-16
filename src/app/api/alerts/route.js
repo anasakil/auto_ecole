@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
 const db = require('@/lib/database');
+const { requireTenant } = require('@/lib/tenant');
 
 export async function GET(request) {
   try {
+    const tenant = await requireTenant(request);
+    if (!tenant) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
 
     if (action === 'counts') {
-      return NextResponse.json(await db.getAlertsCounts());
+      return NextResponse.json(await db.getAlertsCounts(tenant.autoEcoleId));
     }
 
-    return NextResponse.json(await db.getAllAlerts());
+    return NextResponse.json(await db.getAllAlerts(tenant.autoEcoleId));
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
