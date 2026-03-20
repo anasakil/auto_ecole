@@ -278,6 +278,17 @@ async function initDb() {
   // Migration: add logo column to settings if missing
   await db.query("ALTER TABLE settings ADD COLUMN IF NOT EXISTS logo TEXT");
 
+  // Migration: ensure UNIQUE constraint on settings.auto_ecole_id (needed for ON CONFLICT)
+  await db.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'settings_auto_ecole_id_key'
+      ) THEN
+        ALTER TABLE settings ADD CONSTRAINT settings_auto_ecole_id_key UNIQUE (auto_ecole_id);
+      END IF;
+    END $$
+  `);
+
   // Create trigger function for updated_at
   await db.query(`
     CREATE OR REPLACE FUNCTION update_updated_at_column()
