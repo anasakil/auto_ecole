@@ -336,8 +336,14 @@ async function initDb() {
     await db.query("INSERT INTO auto_ecoles (name, slug) VALUES ('Auto-École Maroc', 'auto-ecole-maroc')");
   }
 
-  // Fix settings sequence to avoid pkey conflicts
-  await db.query("SELECT setval('settings_id_seq', COALESCE((SELECT MAX(id) FROM settings), 0) + 1, false)");
+  // Fix settings sequence to avoid pkey conflicts (only if sequence exists)
+  await db.query(`
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'settings_id_seq') THEN
+        PERFORM setval('settings_id_seq', COALESCE((SELECT MAX(id) FROM settings), 0) + 1, false);
+      END IF;
+    END $$
+  `);
 
   // Seed settings for default auto-ecole if empty
   const settingsResult = await db.query('SELECT COUNT(*) as count FROM settings');
