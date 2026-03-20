@@ -336,10 +336,15 @@ async function initDb() {
     await db.query("INSERT INTO auto_ecoles (name, slug) VALUES ('Auto-École Maroc', 'auto-ecole-maroc')");
   }
 
-  // Fix settings sequence to avoid pkey conflicts (only if sequence exists)
+  // Fix settings id column: ensure it has a sequence (SERIAL) for auto-increment
   await db.query(`
     DO $$ BEGIN
-      IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'settings_id_seq') THEN
+      IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'settings_id_seq') THEN
+        CREATE SEQUENCE settings_id_seq;
+        PERFORM setval('settings_id_seq', COALESCE((SELECT MAX(id) FROM settings), 0) + 1, false);
+        ALTER TABLE settings ALTER COLUMN id SET DEFAULT nextval('settings_id_seq');
+        ALTER SEQUENCE settings_id_seq OWNED BY settings.id;
+      ELSE
         PERFORM setval('settings_id_seq', COALESCE((SELECT MAX(id) FROM settings), 0) + 1, false);
       END IF;
     END $$
