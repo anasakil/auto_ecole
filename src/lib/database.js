@@ -325,6 +325,9 @@ async function initDb() {
     await db.query("INSERT INTO auto_ecoles (name, slug) VALUES ('Auto-École Maroc', 'auto-ecole-maroc')");
   }
 
+  // Fix settings sequence to avoid pkey conflicts
+  await db.query("SELECT setval('settings_id_seq', COALESCE((SELECT MAX(id) FROM settings), 0) + 1, false)");
+
   // Seed settings for default auto-ecole if empty
   const settingsResult = await db.query('SELECT COUNT(*) as count FROM settings');
   if (parseInt(settingsResult.rows[0].count) === 0) {
@@ -1057,7 +1060,18 @@ async function updateSettings(autoEcoleId, settings) {
 
 async function createSettingsForAutoEcole(autoEcoleId, settings = {}) {
   return run(`INSERT INTO settings (auto_ecole_id, school_name, address, phone, email, fax, city, tax_register, commercial_register, web_reference, logo)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    ON CONFLICT (auto_ecole_id) DO UPDATE SET
+      school_name = EXCLUDED.school_name,
+      address = EXCLUDED.address,
+      phone = EXCLUDED.phone,
+      email = EXCLUDED.email,
+      fax = EXCLUDED.fax,
+      city = EXCLUDED.city,
+      tax_register = EXCLUDED.tax_register,
+      commercial_register = EXCLUDED.commercial_register,
+      web_reference = EXCLUDED.web_reference,
+      logo = EXCLUDED.logo`,
     [autoEcoleId, settings.school_name || 'Auto-École', settings.address || null, settings.phone || null,
      settings.email || null, settings.fax || null, settings.city || null, settings.tax_register || null,
      settings.commercial_register || null, settings.web_reference || null, settings.logo || null]);
