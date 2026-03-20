@@ -209,7 +209,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS invoices (
       id SERIAL PRIMARY KEY,
       auto_ecole_id INT NOT NULL REFERENCES auto_ecoles(id) ON DELETE CASCADE,
-      invoice_number VARCHAR(100) UNIQUE NOT NULL,
+      invoice_number VARCHAR(100) NOT NULL,
       student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
       payment_id INT REFERENCES payments(id) ON DELETE SET NULL,
       amount DECIMAL(10,2) NOT NULL,
@@ -279,11 +279,16 @@ async function initDb() {
   await db.query("ALTER TABLE settings ADD COLUMN IF NOT EXISTS logo TEXT");
 
   // Migration: ensure UNIQUE constraint on settings.auto_ecole_id (needed for ON CONFLICT)
+  // First, remove orphan settings rows with NULL auto_ecole_id (would block UNIQUE)
+  await db.query(`DELETE FROM settings WHERE auto_ecole_id IS NULL AND NOT EXISTS (SELECT 1 FROM settings WHERE auto_ecole_id IS NOT NULL HAVING COUNT(*) = 0)`);
   await db.query(`
     DO $$ BEGIN
       IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'settings_auto_ecole_id_key'
       ) THEN
+        -- Delete duplicate auto_ecole_id rows keeping lowest id
+        DELETE FROM settings s1 USING settings s2
+        WHERE s1.auto_ecole_id = s2.auto_ecole_id AND s1.id > s2.id;
         ALTER TABLE settings ADD CONSTRAINT settings_auto_ecole_id_key UNIQUE (auto_ecole_id);
       END IF;
     END $$
@@ -391,6 +396,18 @@ async function initDb() {
       END $$
     `);
   }
+
+  // Migration: replace global UNIQUE on invoice_number with per-tenant unique
+  await db.query(`
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'invoices_invoice_number_key') THEN
+        ALTER TABLE invoices DROP CONSTRAINT invoices_invoice_number_key;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'invoices_auto_ecole_invoice_number_key') THEN
+        ALTER TABLE invoices ADD CONSTRAINT invoices_auto_ecole_invoice_number_key UNIQUE (auto_ecole_id, invoice_number);
+      END IF;
+    END $$
+  `);
 
   // Performance indexes
   await db.query(`
@@ -650,7 +667,7 @@ async function cleanupDuplicateAttendance(autoEcoleId) {
     DELETE FROM attendance
     WHERE id IN (
       SELECT a1.id FROM attendance a1
-      INNER JOIN attendance a2 ON a1.student_id = a2.student_id AND a1.date = a2.date
+      INNER JOIN attendance a2 ON a1.student_id = a2.student_id AND a1.date = a2.date AND a2.auto_ecole_id = $2
       WHERE a1.id > a2.id AND a1.date = $1 AND a1.auto_ecole_id = $2
     )
   `, [today, autoEcoleId]);

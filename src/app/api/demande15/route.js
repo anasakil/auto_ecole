@@ -21,7 +21,7 @@ export async function POST(request) {
     const { studentId, overrideData } = await request.json();
     const student = await db.getStudentById(Number(studentId), tenant.autoEcoleId);
     if (!student) throw new Error('Étudiant non trouvé');
-    const settings = await db.getSettings(tenant.autoEcoleId);
+    const settings = (await db.getSettings(tenant.autoEcoleId)) || {};
     const d = overrideData || {};
 
     const schoolName = d.school_name !== undefined ? d.school_name : (settings.school_name || '');
