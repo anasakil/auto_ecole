@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 const db = require('@/lib/database');
 const { requireTenant } = require('@/lib/tenant');

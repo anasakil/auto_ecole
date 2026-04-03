@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 const bcrypt = require('bcryptjs');
 const { getAdminByUsername, initDb } = require('@/lib/database');
