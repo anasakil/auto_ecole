@@ -57,13 +57,16 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
     return 'other';
   }
 
-  async function makeBlobUrl() {
+  function makeBlobUrl() {
     if (!fileData) return null;
     if (blobUrlRef.current) return blobUrlRef.current;
     try {
-      // Use fetch on the data URI — browser handles base64 decode natively and correctly
-      const res = await fetch(fileData);
-      const blob = await res.blob();
+      const [header, b64] = fileData.split(',');
+      const mime = header.match(/:(.*?);/)[1];
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
       const url = URL.createObjectURL(blob);
       blobUrlRef.current = url;
       return url;
@@ -72,20 +75,20 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
     }
   }
 
-  async function handleDownload() {
+  function handleDownload() {
     if (!fileData) return;
-    const url = await makeBlobUrl();
+    const url = makeBlobUrl() || fileData;
     const link = document.createElement('a');
-    link.href = url || fileData;
+    link.href = url;
     link.download = (doc?.name || 'document') + (fileData.startsWith('data:application/pdf') ? '.pdf' : '');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   }
 
-  async function handleOpenNewTab() {
+  function handleOpenNewTab() {
     if (!fileData) return;
-    const url = await makeBlobUrl();
+    const url = makeBlobUrl();
     if (!url) return;
     const a = document.createElement('a');
     a.href = url;

@@ -152,13 +152,14 @@ export async function POST(request) {
     finalPage.drawPage(flatPage, { x: 0, y: 0, width: pageWidth, height: pageHeight });
 
     const pdfBytes = await flatDoc.save();
+    const pdfBuffer = Buffer.from(pdfBytes);
     const demandesDir = getUploadsDir('demandes');
     const fileName = `demande15-${qrCode}-${Date.now()}.pdf`;
     const filePath = path.join(demandesDir, fileName);
-    fs.writeFileSync(filePath, pdfBytes);
+    fs.writeFileSync(filePath, pdfBuffer);
 
     const relativePath = ['uploads', 'demandes', fileName].join('/');
-    const base64Content = `data:application/pdf;base64,${pdfBytes.toString('base64')}`;
+    const base64Content = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
     const docRecord = await db.createDocument(tenant.autoEcoleId, {
       student_id: studentId, type: 'Demande 15j', name: `Demande 15j - ${student.full_name}`,
       file_path: relativePath, file_type: 'pdf', file_size: pdfBytes.length,

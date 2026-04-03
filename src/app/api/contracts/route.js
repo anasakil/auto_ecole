@@ -125,10 +125,11 @@ export async function POST(request) {
     finalPage.drawPage(flatPage, { x: 0, y: 0, width: pageWidth, height: pageHeight });
 
     const pdfBytes = await flatDoc.save();
-    fs.writeFileSync(filePath, pdfBytes);
+    const pdfBuffer = Buffer.from(pdfBytes);
+    fs.writeFileSync(filePath, pdfBuffer);
 
     const relativePath = ['uploads', 'contracts', fileName].join('/');
-    const base64Content = `data:application/pdf;base64,${pdfBytes.toString('base64')}`;
+    const base64Content = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
     const docRecord = await db.createDocument(tenant.autoEcoleId, {
       student_id: studentId,
       type: 'Contrat',
