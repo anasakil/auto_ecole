@@ -6,6 +6,8 @@ import api from '@/utils/api';
 import Modal from '@/components/Modal';
 import ExportButton from '@/components/ExportButton';
 import { formatDate, getTodayISO, formatDuration } from '@/utils/helpers';
+import { usePagination } from '@/hooks/usePagination';
+import Pagination from '@/components/data/Pagination';
 import { CardPageSkeleton } from '@/components/skeletons';
 import { useTenant } from '@/contexts/TenantContext';
 
@@ -143,6 +145,9 @@ function Stages() {
   const todayStages = filteredStages.filter(s => s.scheduled_date === getTodayISO());
   const upcomingStages = filteredStages.filter(s => s.scheduled_date > getTodayISO() && s.status === 'Planifié');
   const pastStages = filteredStages.filter(s => s.scheduled_date < getTodayISO() || s.status !== 'Planifié');
+
+  const { page: pastPage, setPage: setPastPage, totalPages: pastTotalPages, paginatedData: paginatedPastStages } = usePagination(pastStages, 20);
+  const { page: upcomingPage, setPage: setUpcomingPage, totalPages: upcomingTotalPages, paginatedData: paginatedUpcomingStages } = usePagination(upcomingStages, 20);
 
   // Export columns
   const exportColumns = [
@@ -326,7 +331,7 @@ function Stages() {
                 </tr>
               </thead>
               <tbody>
-                {upcomingStages.map((stage) => (
+                {paginatedUpcomingStages.map((stage) => (
                   <tr key={stage.id}>
                     <td>{formatDate(stage.scheduled_date)}</td>
                     <td>{stage.scheduled_time || '-'}</td>
@@ -363,6 +368,17 @@ function Stages() {
               </tbody>
             </table>
           </div>
+          {upcomingTotalPages > 1 && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={upcomingPage}
+                totalPages={upcomingTotalPages}
+                onPageChange={setUpcomingPage}
+                totalItems={upcomingStages.length}
+                pageSize={20}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -384,7 +400,7 @@ function Stages() {
                 </tr>
               </thead>
               <tbody>
-                {pastStages.slice(0, 20).map((stage) => (
+                {paginatedPastStages.map((stage) => (
                   <tr key={stage.id} className="opacity-75">
                     <td>{formatDate(stage.scheduled_date)}</td>
                     <td>
@@ -421,6 +437,17 @@ function Stages() {
               </tbody>
             </table>
           </div>
+          {pastTotalPages > 1 && (
+            <div className="mt-4">
+              <Pagination
+                currentPage={pastPage}
+                totalPages={pastTotalPages}
+                onPageChange={setPastPage}
+                totalItems={pastStages.length}
+                pageSize={20}
+              />
+            </div>
+          )}
         </div>
       )}
 

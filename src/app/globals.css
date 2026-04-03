@@ -102,6 +102,16 @@ body {
   @apply bg-gray-100 text-gray-600;
 }
 
+.badge-orange {
+  background-color: rgba(251, 146, 60, 0.1);
+  color: #c2410c;
+}
+
+.badge-purple {
+  background-color: rgba(167, 139, 250, 0.1);
+  color: #7c3aed;
+}
+
 /* Form styles */
 .form-group {
   @apply mb-4;

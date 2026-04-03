@@ -1,12 +1,22 @@
 const { Pool, types } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 
-// Return DATE (1082) and TIMESTAMP (1114) and TIMESTAMPTZ (1184) as strings, not Date objects
-types.setTypeParser(1082, (val) => val); // DATE -> 'YYYY-MM-DD'
-types.setTypeParser(1114, (val) => val); // TIMESTAMP
-types.setTypeParser(1184, (val) => val); // TIMESTAMPTZ
-// Return NUMERIC/DECIMAL (1700) as numbers, not strings
-types.setTypeParser(1700, (val) => parseFloat(val));
+// PostgreSQL OID type constants
+const PG_OID_DATE        = 1082;
+const PG_OID_TIMESTAMP   = 1114;
+const PG_OID_TIMESTAMPTZ = 1184;
+const PG_OID_NUMERIC     = 1700;
+
+const DEFAULT_TRAINING_DAYS = 30;
+const TOKEN_EXPIRY_HOURS    = 24;
+const BCRYPT_ROUNDS         = 10;
+
+// Return dates as strings (not JS Date objects) to avoid timezone shifts
+types.setTypeParser(PG_OID_DATE,        (val) => val); // 'YYYY-MM-DD'
+types.setTypeParser(PG_OID_TIMESTAMP,   (val) => val);
+types.setTypeParser(PG_OID_TIMESTAMPTZ, (val) => val);
+// Return NUMERIC/DECIMAL as JS numbers (not strings)
+types.setTypeParser(PG_OID_NUMERIC,     (val) => parseFloat(val));
 
 let pool = null;
 
@@ -42,6 +52,31 @@ async function run(sql, params = []) {
   const result = await db.query(sql, params);
   return result;
 }
+
+// Transaction wrapper — ensures atomic multi-step operations
+async function withTransaction(callback) {
+  const db = getPool();
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Graceful shutdown — close pool on process exit to prevent connection leaks
+process.on('beforeExit', async () => {
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
+});
 
 // ==================== INIT DB ====================
 async function initDb() {
@@ -380,7 +415,7 @@ async function initDb() {
   const bcrypt = require('bcryptjs');
   const adminResult = await db.query('SELECT COUNT(*) as count FROM admins');
   if (parseInt(adminResult.rows[0].count) === 0) {
-    const hashedPassword = await bcrypt.hash('Login@2026', 10);
+    const hashedPassword = await bcrypt.hash('Login@2026', BCRYPT_ROUNDS);
     await db.query('INSERT INTO admins (username, password, role, auto_ecole_id) VALUES ($1, $2, $3, NULL)', ['Login', hashedPassword, 'super_admin']);
   }
 
@@ -492,7 +527,8 @@ async function deleteTenantAdmin(adminId) {
 }
 
 // ==================== STUDENTS ====================
-async function getAllStudents(autoEcoleId) {
+async function getAllStudents(autoEcoleId, { limit = null, offset = 0 } = {}) {
+  const paginationClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
   return query(`
     SELECT s.*, o.name as offer_name, o.price as offer_price,
       COALESCE(p.paid_amount, 0) as paid_amount,
@@ -502,6 +538,7 @@ async function getAllStudents(autoEcoleId) {
     LEFT JOIN (SELECT student_id, SUM(amount) as paid_amount FROM payments GROUP BY student_id) p ON p.student_id = s.id
     WHERE s.auto_ecole_id = $1
     ORDER BY s.created_at DESC
+    ${paginationClause}
   `, [autoEcoleId]);
 }
 
@@ -517,7 +554,7 @@ async function getStudentById(id, autoEcoleId) {
     student.payments = await getPaymentsByStudent(id, autoEcoleId);
     student.attendance = await getAttendanceByStudent(id, autoEcoleId);
     student.paid_amount = student.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-    if (!student.total_price && student.offer_price) {
+    if ((student.total_price === null || student.total_price === undefined) && student.offer_price != null) {
       student.total_price = student.offer_price;
     }
   }
@@ -708,10 +745,12 @@ async function getPaymentsByStudent(studentId, autoEcoleId) {
   return query('SELECT * FROM payments WHERE student_id = $1 AND auto_ecole_id = $2 ORDER BY payment_date DESC', [studentId, autoEcoleId]);
 }
 
-async function getAllPayments(autoEcoleId) {
+async function getAllPayments(autoEcoleId, { limit = null, offset = 0 } = {}) {
+  const paginationClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
   return query(`
     SELECT p.*, s.full_name, s.cin FROM payments p
     JOIN students s ON p.student_id = s.id WHERE p.auto_ecole_id = $1 ORDER BY p.payment_date DESC
+    ${paginationClause}
   `, [autoEcoleId]);
 }
 
@@ -786,10 +825,12 @@ async function getStagesByStudent(studentId, autoEcoleId) {
   return query('SELECT * FROM stages WHERE student_id = $1 AND auto_ecole_id = $2 ORDER BY scheduled_date DESC', [studentId, autoEcoleId]);
 }
 
-async function getAllStages(autoEcoleId) {
+async function getAllStages(autoEcoleId, { limit = null, offset = 0 } = {}) {
+  const paginationClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
   return query(`
     SELECT st.*, s.full_name, s.phone, s.license_type FROM stages st
-    JOIN students s ON st.student_id = s.id WHERE st.auto_ecole_id = $1 ORDER BY st.scheduled_date
+    JOIN students s ON st.student_id = s.id WHERE st.auto_ecole_id = $1 ORDER BY st.scheduled_date DESC
+    ${paginationClause}
   `, [autoEcoleId]);
 }
 
@@ -981,10 +1022,12 @@ async function getInvoicesByStudent(studentId, autoEcoleId) {
   return query('SELECT * FROM invoices WHERE student_id = $1 AND auto_ecole_id = $2 ORDER BY issue_date DESC', [studentId, autoEcoleId]);
 }
 
-async function getAllInvoices(autoEcoleId) {
+async function getAllInvoices(autoEcoleId, { limit = null, offset = 0 } = {}) {
+  const paginationClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
   return query(`
     SELECT i.*, s.full_name, s.cin FROM invoices i
     JOIN students s ON i.student_id = s.id WHERE i.auto_ecole_id = $1 ORDER BY i.issue_date DESC
+    ${paginationClause}
   `, [autoEcoleId]);
 }
 
@@ -1142,8 +1185,9 @@ async function getIncidentsByStudent(studentId, autoEcoleId) {
   return query('SELECT * FROM incidents WHERE student_id = $1 AND auto_ecole_id = $2 ORDER BY date DESC', [studentId, autoEcoleId]);
 }
 
-async function getAllIncidents(autoEcoleId) {
-  return query('SELECT i.*, s.full_name, s.qr_code FROM incidents i JOIN students s ON i.student_id = s.id WHERE i.auto_ecole_id = $1 ORDER BY i.date DESC', [autoEcoleId]);
+async function getAllIncidents(autoEcoleId, { limit = null, offset = 0 } = {}) {
+  const paginationClause = limit ? `LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}` : '';
+  return query(`SELECT i.*, s.full_name, s.qr_code FROM incidents i JOIN students s ON i.student_id = s.id WHERE i.auto_ecole_id = $1 ORDER BY i.date DESC ${paginationClause}`, [autoEcoleId]);
 }
 
 async function getUnresolvedIncidents(autoEcoleId) {
@@ -1179,7 +1223,7 @@ async function getAdminByUsername(username) {
 }
 
 module.exports = {
-  getDb, initDb, getAdminByUsername,
+  getDb, initDb, withTransaction, getAdminByUsername,
   // Auto-ecoles
   getAllAutoEcoles, getAutoEcoleById, getAutoEcoleBySlug, createAutoEcole, updateAutoEcole, deleteAutoEcole,
   getAdminsByAutoEcole, createTenantAdmin, updateTenantAdminPassword, deleteTenantAdmin,

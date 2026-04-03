@@ -6,174 +6,171 @@ import path from 'path';
 const { requireAuth } = require('@/lib/tenant');
 const db = require('@/lib/database');
 
-function getUploadsDir(subfolder = '') {
-  const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
-  const uploadsDir = path.join(base, subfolder);
-  if (!existsSync(uploadsDir)) {
-    require('fs').mkdirSync(uploadsDir, { recursive: true });
-  }
-  return uploadsDir;
+const ALLOWED_SUBFOLDERS = new Set(['documents', 'profiles', 'contracts', 'photos']);
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+function getUploadsBase() {
+  return process.env.VERCEL ? '/tmp' : path.resolve(process.cwd(), 'uploads');
+}
+
+async function getUploadsDir(subfolder = 'documents') {
+  const safe = subfolder.replace(/[^a-zA-Z0-9_-]/g, '');
+  const dir = path.resolve(getUploadsBase(), safe);
+  await mkdir(dir, { recursive: true });
+  return dir;
 }
 
 function generateFileName(originalName) {
-  const ext = path.extname(originalName);
+  const ext = path.extname(originalName).toLowerCase().replace(/[^.a-z0-9]/g, '');
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
   return `${timestamp}-${random}${ext}`;
 }
 
-const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf'];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+/**
+ * Resolve and validate a file path is within allowed directories.
+ * Returns the resolved absolute path or null if unauthorized.
+ */
+function resolveAllowedPath(rawPath) {
+  if (!rawPath || typeof rawPath !== 'string') return null;
+
+  // Normalize separators
+  const normalized = rawPath.replace(/\\/g, '/');
+
+  // Block null bytes and traversal before resolve
+  if (normalized.includes('\0')) return null;
+
+  const uploadsBase = path.resolve(process.cwd(), 'uploads');
+  const tmpBase     = path.resolve('/tmp');
+  const publicBase  = path.resolve(process.cwd(), 'public');
+
+  const resolved = path.resolve(process.cwd(), normalized);
+
+  const allowed =
+    resolved.startsWith(uploadsBase + path.sep) ||
+    resolved.startsWith(uploadsBase + '/') ||
+    resolved === uploadsBase ||
+    resolved.startsWith(tmpBase + path.sep) ||
+    resolved.startsWith(tmpBase + '/') ||
+    resolved.startsWith(publicBase + path.sep) ||
+    resolved.startsWith(publicBase + '/');
+
+  return allowed ? resolved : null;
+}
 
 export async function POST(request) {
   try {
     const auth = requireAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    if (!auth) return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 });
 
     const formData = await request.formData();
     const file = formData.get('file');
-    const subfolder = (formData.get('subfolder') || 'documents').replace(/[^a-zA-Z0-9_-]/g, '');
+    const rawSubfolder = (formData.get('subfolder') || 'documents').replace(/[^a-zA-Z0-9_-]/g, '');
+    const subfolder = ALLOWED_SUBFOLDERS.has(rawSubfolder) ? rawSubfolder : 'documents';
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
-    }
+    if (!file) return NextResponse.json({ success: false, error: 'Aucun fichier reçu' }, { status: 400 });
+    if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ success: false, error: 'Type de fichier non autorisé' }, { status: 400 });
+    if (file.size > MAX_FILE_SIZE) return NextResponse.json({ success: false, error: 'Fichier trop volumineux (max 5 Mo)' }, { status: 400 });
 
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Type de fichier non autorisé' }, { status: 400 });
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: 'Fichier trop volumineux (max 5 Mo)' }, { status: 400 });
-    }
-
-    const uploadsDir = getUploadsDir(subfolder);
+    const uploadsDir = await getUploadsDir(subfolder);
     const fileName = generateFileName(file.name);
     const filePath = path.join(uploadsDir, fileName);
 
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    await writeFile(filePath, Buffer.from(bytes));
 
     const relativePath = ['uploads', subfolder, fileName].join('/');
-    return NextResponse.json({ filePath: relativePath, fileName });
+    return NextResponse.json({ success: true, filePath: relativePath, fileName });
   } catch (error) {
-    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    console.error('[files POST]', error);
+    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
 export async function GET(request) {
   try {
     const auth = requireAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    if (!auth) return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const rawPath = searchParams.get('path');
 
-    if (!rawPath) {
-      return NextResponse.json({ error: 'No file path provided' }, { status: 400 });
-    }
+    if (!rawPath) return NextResponse.json({ success: false, error: 'Chemin manquant' }, { status: 400 });
 
-    // Normalize path separators (Windows backslashes → forward slashes)
-    const filePath = rawPath.replace(/\\/g, '/');
+    const fullPath = resolveAllowedPath(rawPath);
+    if (!fullPath) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
 
-    // Block path traversal attempts
-    if (filePath.includes('..') || filePath.includes('\0')) {
-      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
-    }
+    const normalizedPath = rawPath.replace(/\\/g, '/');
 
-    // Try both local uploads and /tmp (Vercel)
-    let fullPath = path.resolve(process.cwd(), filePath);
-
-    // Path traversal protection — verify resolved path stays within allowed directories
-    const uploadsBase = path.resolve(process.cwd(), 'uploads');
-    const publicBase = path.resolve(process.cwd(), 'public');
-
-    const isAuthorized = fullPath.startsWith(uploadsBase) || fullPath.startsWith(publicBase);
-
-    if (!isAuthorized) {
-      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
-    }
-
-    // On Vercel, try DB first since /tmp is ephemeral and files won't persist across invocations
+    // On Vercel: try DB first (files in /tmp don't persist across invocations)
     if (process.env.VERCEL) {
       try {
-        // Try both forward-slash and backslash versions of the path
-        let doc = await db.getDocumentByPath(filePath, auth.autoEcoleId);
+        let doc = await db.getDocumentByPath(normalizedPath, auth.autoEcoleId);
         if (!doc) {
-          const backslashPath = filePath.replace(/\//g, '\\');
-          doc = await db.getDocumentByPath(backslashPath, auth.autoEcoleId);
+          doc = await db.getDocumentByPath(normalizedPath.replace(/\//g, '\\'), auth.autoEcoleId);
         }
-        if (doc && doc.file_content) {
-          return NextResponse.json({ data: doc.file_content });
-        }
-      } catch (dbError) {
-        console.error('Database fallback error:', dbError);
+        if (doc?.file_content) return NextResponse.json({ data: doc.file_content });
+      } catch (dbErr) {
+        console.error('[files GET] DB fallback error:', dbErr);
       }
 
-      // Then try /tmp as last resort
-      const tmpPath = filePath.replace(/^uploads/, '/tmp');
-      const resolvedTmpPath = path.resolve(tmpPath);
-      if (existsSync(resolvedTmpPath)) {
-        fullPath = resolvedTmpPath;
-      } else {
-        return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      const tmpResolved = resolveAllowedPath(normalizedPath.replace(/^uploads/, '/tmp'));
+      if (tmpResolved && existsSync(tmpResolved)) {
+        const buf = await readFile(tmpResolved);
+        return NextResponse.json({ data: toBase64(tmpResolved, buf) });
       }
+      return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
     }
 
     if (!existsSync(fullPath)) {
-      // Fallback: Check database for file content
+      // Fallback to DB
       try {
-        const doc = await db.getDocumentByPath(filePath, auth.autoEcoleId);
-        if (doc && doc.file_content) {
-          return NextResponse.json({ data: doc.file_content });
-        }
-      } catch (dbError) {
-        console.error('Database fallback error:', dbError);
+        const doc = await db.getDocumentByPath(normalizedPath, auth.autoEcoleId);
+        if (doc?.file_content) return NextResponse.json({ data: doc.file_content });
+      } catch (dbErr) {
+        console.error('[files GET] DB fallback error:', dbErr);
       }
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
     }
 
-    const fileBuffer = await readFile(fullPath);
-    const ext = path.extname(fullPath).toLowerCase();
-    const mimeTypes = {
-      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-      '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf',
-    };
-    const mimeType = mimeTypes[ext] || 'application/octet-stream';
-    const base64 = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
-
-    return NextResponse.json({ data: base64 });
+    const buf = await readFile(fullPath);
+    return NextResponse.json({ data: toBase64(fullPath, buf) });
   } catch (error) {
-    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    console.error('[files GET]', error);
+    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
 export async function DELETE(request) {
   try {
     const auth = requireAuth(request);
-    if (!auth) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+    if (!auth) return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const filePath = searchParams.get('path');
+    const rawPath = searchParams.get('path');
 
-    if (!filePath) {
-      return NextResponse.json({ error: 'No file path provided' }, { status: 400 });
-    }
+    if (!rawPath) return NextResponse.json({ success: false, error: 'Chemin manquant' }, { status: 400 });
 
-    const fullPath = path.resolve(process.cwd(), filePath);
+    const fullPath = resolveAllowedPath(rawPath);
+    if (!fullPath) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
 
-    // Path traversal protection
-    const uploadsBase = path.resolve(process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads'));
-    if (!fullPath.startsWith(uploadsBase) && !fullPath.startsWith(path.resolve(process.cwd(), 'public'))) {
-      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
-    }
-
-    if (existsSync(fullPath)) {
-      await unlink(fullPath);
-    }
+    if (existsSync(fullPath)) await unlink(fullPath);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    console.error('[files DELETE]', error);
+    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
   }
+}
+
+function toBase64(filePath, buffer) {
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeTypes = {
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+    '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf',
+    '.svg': 'image/svg+xml',
+  };
+  const mimeType = mimeTypes[ext] || 'application/octet-stream';
+  return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }

@@ -10,7 +10,8 @@ import ExportButton from '@/components/ExportButton';
 import { Button, Badge, Card } from '@/components/ui';
 import { LoadingSpinner, Alert } from '@/components/feedback';
 import { PageHeader, SearchInput, FilterBar } from '@/components/layout/index';
-import { DataTable, EmptyState, StatsCard } from '@/components/data';
+import { DataTable, EmptyState, StatsCard, Pagination } from '@/components/data';
+import { usePagination } from '@/hooks/usePagination';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirmDialog } from '@/contexts/ConfirmContext';
 import { formatDate, formatCurrency, calculateRemainingDays } from '@/utils/helpers';
@@ -194,6 +195,8 @@ function Students() {
     const matchesStatus = !filterStatus || student.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const { page: studentsPage, setPage: setStudentsPage, totalPages: studentsTotalPages, paginatedData: paginatedStudents } = usePagination(filteredStudents, 20);
 
   // Stats calculation
   const stats = {
@@ -490,7 +493,7 @@ function Students() {
       <Card padding="none">
         <DataTable
           columns={tableColumns}
-          data={filteredStudents}
+          data={paginatedStudents}
           loading={loading}
           emptyState={
             <EmptyState.NoStudents onAction={handleAdd} />
@@ -501,11 +504,16 @@ function Students() {
         />
       </Card>
 
-      {/* Results count */}
+      {/* Pagination */}
       {filteredStudents.length > 0 && (
-        <div className="mt-4 text-sm text-gray-500 text-center">
-          {filteredStudents.length} étudiant{filteredStudents.length > 1 ? 's' : ''} trouvé{filteredStudents.length > 1 ? 's' : ''}
-          {(searchTerm || filterStatus) && ` (sur ${students.length} au total)`}
+        <div className="mt-4">
+          <Pagination
+            currentPage={studentsPage}
+            totalPages={studentsTotalPages}
+            onPageChange={setStudentsPage}
+            totalItems={filteredStudents.length}
+            pageSize={20}
+          />
         </div>
       )}
 

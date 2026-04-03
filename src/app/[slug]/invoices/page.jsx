@@ -6,6 +6,8 @@ import api from '@/utils/api';
 import Modal from '@/components/Modal';
 import ExportButton from '@/components/ExportButton';
 import { formatDate, formatCurrency, getTodayISO, PAYMENT_METHODS } from '@/utils/helpers';
+import { usePagination } from '@/hooks/usePagination';
+import Pagination from '@/components/data/Pagination';
 import { TablePageSkeleton } from '@/components/skeletons';
 import { useTenant } from '@/contexts/TenantContext';
 
@@ -263,6 +265,8 @@ function Invoices() {
     return matchesSearch && matchesStatus;
   });
 
+  const { page: invoicesPage, setPage: setInvoicesPage, totalPages: invoicesTotalPages, paginatedData: paginatedInvoices } = usePagination(filteredInvoices, 20);
+
   // Stats
   const totalInvoices = filteredInvoices.length;
   const totalAmount = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
@@ -377,7 +381,7 @@ function Invoices() {
                 </td>
               </tr>
             ) : (
-              filteredInvoices.map((invoice) => {
+              paginatedInvoices.map((invoice) => {
                 const linkedPayment = invoice.payment_id
                   ? allPayments.find(p => p.id === invoice.payment_id)
                   : null;
@@ -448,6 +452,18 @@ function Invoices() {
           </tbody>
         </table>
       </div>
+
+      {filteredInvoices.length > 0 && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={invoicesPage}
+            totalPages={invoicesTotalPages}
+            onPageChange={setInvoicesPage}
+            totalItems={filteredInvoices.length}
+            pageSize={20}
+          />
+        </div>
+      )}
 
       {/* Create Invoice Modal */}
       <Modal

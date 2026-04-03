@@ -5,6 +5,8 @@ import api from '@/utils/api';
 import Modal from '@/components/Modal';
 import ExportButton from '@/components/ExportButton';
 import { formatCurrency, LICENSE_TYPES } from '@/utils/helpers';
+import { usePagination } from '@/hooks/usePagination';
+import Pagination from '@/components/data/Pagination';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirmDialog } from '@/contexts/ConfirmContext';
 import { CardPageSkeleton } from '@/components/skeletons';
@@ -21,6 +23,8 @@ function Offers() {
   const toast = useToast();
   const { confirmDelete } = useConfirmDialog();
   const { slug } = useTenant();
+
+  const { page: offersPage, setPage: setOffersPage, totalPages: offersTotalPages, paginatedData: paginatedOffers } = usePagination(offers, 20);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -170,7 +174,7 @@ function Offers() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {offers.map((offer) => (
+          {paginatedOffers.map((offer) => (
             <div key={offer.id} className="card hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -215,6 +219,18 @@ function Offers() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {offersTotalPages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={offersPage}
+            totalPages={offersTotalPages}
+            onPageChange={setOffersPage}
+            totalItems={offers.length}
+            pageSize={20}
+          />
         </div>
       )}
 

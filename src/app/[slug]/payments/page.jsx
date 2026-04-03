@@ -6,6 +6,8 @@ import api from '@/utils/api';
 import Modal from '@/components/Modal';
 import ExportButton from '@/components/ExportButton';
 import { formatDate, formatCurrency, PAYMENT_METHODS, getTodayISO } from '@/utils/helpers';
+import { usePagination } from '@/hooks/usePagination';
+import Pagination from '@/components/data/Pagination';
 import { useToast } from '@/contexts/ToastContext';
 import { useConfirmDialog } from '@/contexts/ConfirmContext';
 import { TablePageSkeleton } from '@/components/skeletons';
@@ -230,6 +232,8 @@ function Payments() {
     const matchesMethod = !filterMethod || payment.payment_method === filterMethod;
     return matchesSearch && matchesMethod;
   });
+
+  const { page: paymentsPage, setPage: setPaymentsPage, totalPages: paymentsTotalPages, paginatedData: paginatedPayments } = usePagination(filteredPayments, 20);
 
   // Calculate totals
   const totalAmount = filteredPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
@@ -532,7 +536,7 @@ function Payments() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filteredPayments.map((payment) => {
+                {paginatedPayments.map((payment) => {
                   const linkedInvoice = invoices.find(inv => inv.payment_id === payment.id);
                   return (
                     <tr key={payment.id} className="hover:bg-gray-50/50 transition-colors">
@@ -603,6 +607,17 @@ function Payments() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {filteredPayments.length > 0 && (
+          <div className="mt-4 px-2">
+            <Pagination
+              currentPage={paymentsPage}
+              totalPages={paymentsTotalPages}
+              onPageChange={setPaymentsPage}
+              totalItems={filteredPayments.length}
+              pageSize={20}
+            />
           </div>
         )}
       </div>

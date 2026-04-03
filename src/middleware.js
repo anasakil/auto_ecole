@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
 function addSecurityHeaders(response) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
@@ -11,15 +12,20 @@ function addSecurityHeaders(response) {
   return response;
 }
 
-export function middleware(request) {
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET || '';
+  return new TextEncoder().encode(secret);
+}
+
+export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow static files early (no security headers needed for _next assets)
+  // Allow static files early
   if (pathname.startsWith('/_next') || pathname.startsWith('/favicon') || pathname.startsWith('/fonts')) {
     return NextResponse.next();
   }
 
-  // Block /api/init entirely in production
+  // Block /api/init in production
   if (pathname.startsWith('/api/init') && process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available' }, { status: 404 });
   }
@@ -54,17 +60,9 @@ export function middleware(request) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   }
 
-  // Verify JWT structure and decode payload to check expiry
+  // Verify JWT signature + expiry using jose (Edge-compatible)
   try {
-    const parts = token.split('.');
-    if (parts.length !== 3) throw new Error('Invalid token');
-
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const now = Math.floor(Date.now() / 1000);
-
-    if (!payload.exp || payload.exp < now) {
-      throw new Error('Token expired');
-    }
+    const { payload } = await jwtVerify(token, getJwtSecret(), { algorithms: ['HS256'] });
 
     if (!payload.id || !payload.username) {
       throw new Error('Invalid payload');
