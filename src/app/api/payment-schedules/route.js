@@ -26,7 +26,7 @@ export async function GET(request) {
 
     return NextResponse.json([]);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -45,6 +45,6 @@ export async function POST(request) {
     const result = await db.createPaymentSchedule(tenant.autoEcoleId, data.studentId, data.schedules);
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

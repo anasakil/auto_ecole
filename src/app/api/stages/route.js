@@ -19,7 +19,7 @@ export async function GET(request) {
 
     return NextResponse.json(await db.getAllStages(tenant.autoEcoleId));
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -32,7 +32,7 @@ export async function POST(request) {
     const result = await db.createStage(tenant.autoEcoleId, data);
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -47,7 +47,7 @@ export async function PUT(request) {
     await db.updateStage(id, tenant.autoEcoleId, data);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -61,6 +61,6 @@ export async function DELETE(request) {
     await db.deleteStage(id, tenant.autoEcoleId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

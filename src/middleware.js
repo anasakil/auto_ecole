@@ -1,18 +1,43 @@
 import { NextResponse } from 'next/server';
 
+function addSecurityHeaders(response) {
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  if (process.env.NODE_ENV === 'production') {
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  return response;
+}
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow login page, auth API, init API, static files
+  // Allow static files early (no security headers needed for _next assets)
+  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon') || pathname.startsWith('/fonts')) {
+    return NextResponse.next();
+  }
+
+  // Block /api/init entirely in production
+  if (pathname.startsWith('/api/init') && process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available' }, { status: 404 });
+  }
+
+  // Allow public routes
   if (
     pathname === '/login' ||
     pathname.startsWith('/api/auth') ||
-    (pathname.startsWith('/api/init') && process.env.NODE_ENV !== 'production') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.startsWith('/fonts')
+    pathname.startsWith('/api/ecoles/') ||
+    (pathname.startsWith('/api/init') && process.env.NODE_ENV !== 'production')
   ) {
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next());
+  }
+
+  // Allow tenant login pages: /[slug]/login
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length === 2 && segments[1] === 'login' && segments[0] !== 'super-admin') {
+    return addSecurityHeaders(NextResponse.next());
   }
 
   // Check for auth token cookie
@@ -20,6 +45,10 @@ export function middleware(request) {
 
   if (!token) {
     if (!pathname.startsWith('/api/')) {
+      const urlSlug = segments[0];
+      if (urlSlug && urlSlug !== 'super-admin' && urlSlug !== 'login') {
+        return NextResponse.redirect(new URL(`/${urlSlug}/login`, request.url));
+      }
       return NextResponse.redirect(new URL('/login', request.url));
     }
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -30,7 +59,6 @@ export function middleware(request) {
     const parts = token.split('.');
     if (parts.length !== 3) throw new Error('Invalid token');
 
-    // Decode payload (base64) and check expiry
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
     const now = Math.floor(Date.now() / 1000);
 
@@ -44,7 +72,6 @@ export function middleware(request) {
 
     // Role-based route protection
     if (pathname.startsWith('/super-admin')) {
-      // Only super_admin can access /super-admin routes
       if (payload.role !== 'super_admin') {
         if (payload.slug) {
           return NextResponse.redirect(new URL(`/${payload.slug}`, request.url));
@@ -52,19 +79,21 @@ export function middleware(request) {
         return NextResponse.redirect(new URL('/login', request.url));
       }
     } else if (pathname === '/') {
-      // Root redirect based on role
       if (payload.role === 'super_admin') {
         return NextResponse.redirect(new URL('/super-admin', request.url));
       } else if (payload.slug) {
         return NextResponse.redirect(new URL(`/${payload.slug}`, request.url));
       }
     } else if (!pathname.startsWith('/api/')) {
-      // For tenant routes like /some-slug/students
-      // Extract the slug from URL
-      const urlSlug = pathname.split('/')[1];
-      // Skip if it's super-admin (already handled above)
+      const urlSlug = segments[0];
       if (urlSlug && urlSlug !== 'super-admin' && urlSlug !== 'login') {
-        // If not super_admin, verify slug matches
+        // Already authed on login page → redirect to dashboard
+        if (segments[1] === 'login') {
+          if (payload.role === 'super_admin' || payload.slug === urlSlug) {
+            return NextResponse.redirect(new URL(`/${urlSlug}`, request.url));
+          }
+        }
+        // Verify slug matches for non-super-admin
         if (payload.role !== 'super_admin' && payload.slug !== urlSlug) {
           if (payload.slug) {
             return NextResponse.redirect(new URL(`/${payload.slug}`, request.url));
@@ -74,10 +103,15 @@ export function middleware(request) {
       }
     }
 
-    return NextResponse.next();
+    return addSecurityHeaders(NextResponse.next());
   } catch {
-    // Clear invalid cookie and redirect
     if (!pathname.startsWith('/api/')) {
+      const urlSlug = segments[0];
+      if (urlSlug && urlSlug !== 'super-admin' && urlSlug !== 'login') {
+        const response = NextResponse.redirect(new URL(`/${urlSlug}/login`, request.url));
+        response.cookies.set('auth_token', '', { maxAge: 0, path: '/' });
+        return response;
+      }
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.set('auth_token', '', { maxAge: 0, path: '/' });
       return response;

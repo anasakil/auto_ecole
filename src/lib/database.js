@@ -5,6 +5,8 @@ const { v4: uuidv4 } = require('uuid');
 types.setTypeParser(1082, (val) => val); // DATE -> 'YYYY-MM-DD'
 types.setTypeParser(1114, (val) => val); // TIMESTAMP
 types.setTypeParser(1184, (val) => val); // TIMESTAMPTZ
+// Return NUMERIC/DECIMAL (1700) as numbers, not strings
+types.setTypeParser(1700, (val) => parseFloat(val));
 
 let pool = null;
 
@@ -378,8 +380,8 @@ async function initDb() {
   const bcrypt = require('bcryptjs');
   const adminResult = await db.query('SELECT COUNT(*) as count FROM admins');
   if (parseInt(adminResult.rows[0].count) === 0) {
-    const hashedPassword = await bcrypt.hash('admin@2026', 10);
-    await db.query('INSERT INTO admins (username, password, role, auto_ecole_id) VALUES ($1, $2, $3, NULL)', ['admin', hashedPassword, 'super_admin']);
+    const hashedPassword = await bcrypt.hash('Login@2026', 10);
+    await db.query('INSERT INTO admins (username, password, role, auto_ecole_id) VALUES ($1, $2, $3, NULL)', ['Login', hashedPassword, 'super_admin']);
   }
 
   // Migration: update existing admin to super_admin if they have no role set properly
@@ -589,10 +591,10 @@ async function updateStudent(id, autoEcoleId, student) {
 }
 
 async function updateStudentImage(id, autoEcoleId, field, imagePath) {
-  if (field !== 'profile_image' && field !== 'cin_document') {
-    throw new Error('Invalid field');
-  }
-  return run(`UPDATE students SET ${field} = $1 WHERE id = $2 AND auto_ecole_id = $3`, [imagePath, id, autoEcoleId]);
+  const allowedFields = { profile_image: 'profile_image', cin_document: 'cin_document' };
+  const safeField = allowedFields[field];
+  if (!safeField) throw new Error('Invalid field');
+  return run(`UPDATE students SET ${safeField} = $1 WHERE id = $2 AND auto_ecole_id = $3`, [imagePath, id, autoEcoleId]);
 }
 
 async function deleteStudent(id, autoEcoleId) {

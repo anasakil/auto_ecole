@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 const db = require('@/lib/database');
 const { requireSuperAdmin } = require('@/lib/tenant');
 
+function validatePassword(password) {
+  if (!password || password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères';
+  if (!/[A-Za-z]/.test(password)) return 'Le mot de passe doit contenir au moins une lettre';
+  if (!/[0-9]/.test(password)) return 'Le mot de passe doit contenir au moins un chiffre';
+  return null;
+}
+
 export async function GET(request) {
   try {
     const admin = requireSuperAdmin(request);
@@ -17,7 +24,7 @@ export async function GET(request) {
     const admins = await db.getAdminsByAutoEcole(Number(autoEcoleId));
     return NextResponse.json(admins);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -33,6 +40,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'autoEcoleId, username et password requis' }, { status: 400 });
     }
 
+    // Validate password strength
+    const pwError = validatePassword(data.password);
+    if (pwError) return NextResponse.json({ error: pwError }, { status: 400 });
+
     // Check username uniqueness
     const existing = await db.getAdminByUsername(data.username);
     if (existing) {
@@ -42,7 +53,7 @@ export async function POST(request) {
     const result = await db.createTenantAdmin(autoEcoleId, data.username, data.password);
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -59,10 +70,13 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Nouveau mot de passe requis' }, { status: 400 });
     }
 
+    const pwError = validatePassword(data.password);
+    if (pwError) return NextResponse.json({ error: pwError }, { status: 400 });
+
     await db.updateTenantAdminPassword(adminId, data.password);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -76,6 +90,6 @@ export async function DELETE(request) {
     await db.deleteTenantAdmin(adminId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

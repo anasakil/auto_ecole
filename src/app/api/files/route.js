@@ -56,7 +56,7 @@ export async function POST(request) {
     const relativePath = ['uploads', subfolder, fileName].join('/');
     return NextResponse.json({ filePath: relativePath, fileName });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -75,17 +75,19 @@ export async function GET(request) {
     // Normalize path separators (Windows backslashes → forward slashes)
     const filePath = rawPath.replace(/\\/g, '/');
 
+    // Block path traversal attempts
+    if (filePath.includes('..') || filePath.includes('\0')) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
     // Try both local uploads and /tmp (Vercel)
     let fullPath = path.resolve(process.cwd(), filePath);
 
-    // Path traversal protection
+    // Path traversal protection — verify resolved path stays within allowed directories
     const uploadsBase = path.resolve(process.cwd(), 'uploads');
     const publicBase = path.resolve(process.cwd(), 'public');
-    const tmpBase = '/tmp'; // Vercel ephemeral storage
 
-    const isAuthorized = fullPath.startsWith(uploadsBase) ||
-                       fullPath.startsWith(publicBase) ||
-                       (process.env.VERCEL && filePath.startsWith('uploads'));
+    const isAuthorized = fullPath.startsWith(uploadsBase) || fullPath.startsWith(publicBase);
 
     if (!isAuthorized) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
@@ -141,7 +143,7 @@ export async function GET(request) {
 
     return NextResponse.json({ data: base64 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -171,6 +173,6 @@ export async function DELETE(request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

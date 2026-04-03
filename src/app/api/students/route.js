@@ -19,7 +19,7 @@ export async function GET(request) {
     const students = await db.getAllStudents(tenant.autoEcoleId);
     return NextResponse.json(students);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -32,7 +32,7 @@ export async function POST(request) {
     const result = await db.createStudent(tenant.autoEcoleId, data);
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -63,7 +63,7 @@ export async function PUT(request) {
     await db.updateStudent(id, tenant.autoEcoleId, data);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -77,6 +77,6 @@ export async function DELETE(request) {
     await db.deleteStudent(id, tenant.autoEcoleId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

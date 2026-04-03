@@ -9,7 +9,7 @@ export async function GET(request) {
 
     return NextResponse.json(await db.getSettings(tenant.autoEcoleId));
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }
 
@@ -22,6 +22,6 @@ export async function PUT(request) {
     await db.updateSettings(tenant.autoEcoleId, data);
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

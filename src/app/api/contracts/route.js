@@ -142,6 +142,6 @@ export async function POST(request) {
     return NextResponse.json({ success: true, path: relativePath, documentId: docRecord.id });
   } catch (error) {
     console.error('Error generating contract:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
   }
 }

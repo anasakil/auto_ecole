@@ -232,13 +232,13 @@ function Payments() {
   });
 
   // Calculate totals
-  const totalAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalAmount = filteredPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const cashAmount = filteredPayments
     .filter((p) => p.payment_method === 'Cash')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const transferAmount = filteredPayments
     .filter((p) => p.payment_method === 'Transfer')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
   // Get students with remaining balance
   const studentsWithDebt = students.filter((s) => {
@@ -348,63 +348,114 @@ function Payments() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="card">
-          <p className="text-sm text-gray-500">Total des Paiements</p>
-          <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalAmount)}</p>
+        <div className="card bg-gradient-to-br from-gray-50 to-white border border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gray-100 rounded-xl">
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total des Paiements</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(totalAmount)}</p>
+            </div>
+          </div>
         </div>
-        <div className="card">
-          <p className="text-sm text-gray-500">Espèces</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(cashAmount)}</p>
+        <div className="card bg-gradient-to-br from-green-50 to-white border border-green-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-green-100 rounded-xl">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Espèces</p>
+              <p className="text-xl font-bold text-green-600">{formatCurrency(cashAmount)}</p>
+            </div>
+          </div>
         </div>
-        <div className="card">
-          <p className="text-sm text-gray-500">Virements</p>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(transferAmount)}</p>
+        <div className="card bg-gradient-to-br from-blue-50 to-white border border-blue-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-100 rounded-xl">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Virements</p>
+              <p className="text-xl font-bold text-blue-600">{formatCurrency(transferAmount)}</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Students with remaining balance */}
       {studentsWithDebt.length > 0 && (
         <div className="card mb-6">
-          <h2 className="card-header">Étudiants avec Solde Impayé ({studentsWithDebt.length})</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              Solde Impayé
+            </h2>
+            <span className="text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
+              {studentsWithDebt.length} étudiant{studentsWithDebt.length > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {studentsWithDebt.slice(0, 6).map((student) => {
-              const paid = student.paid_amount || 0;
-              const remaining = student.total_price - paid;
+              const paid = parseFloat(student.paid_amount) || 0;
+              const total = parseFloat(student.total_price) || 0;
+              const remaining = total - paid;
+              const percentage = total > 0 ? Math.round((paid / total) * 100) : 0;
               return (
-                <div key={student.id} className="p-3 bg-red-50 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <Link
-                        href={`/${slug}/students/${student.id}`}
-                        className="font-medium text-gray-900 hover:text-primary-600"
-                      >
-                        {student.full_name}
-                      </Link>
-                      <p className="text-sm text-gray-500">
-                        Payé: {formatCurrency(paid)} / {formatCurrency(student.total_price)}
-                      </p>
-                    </div>
-                    <span className="text-red-600 font-bold text-sm">
+                <div key={student.id} className="p-3 rounded-xl border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all">
+                  <div className="flex justify-between items-start mb-2">
+                    <Link
+                      href={`/${slug}/students/${student.id}`}
+                      className="font-medium text-sm text-gray-900 hover:text-primary-600 transition-colors"
+                    >
+                      {student.full_name}
+                    </Link>
+                    <span className="text-red-600 font-semibold text-sm whitespace-nowrap ml-2">
                       -{formatCurrency(remaining)}
                     </span>
                   </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5 mb-1.5">
+                    <div
+                      className="h-1.5 rounded-full bg-gradient-to-r from-orange-400 to-orange-500 transition-all"
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {formatCurrency(paid)} / {formatCurrency(total)} ({percentage}%)
+                  </p>
                 </div>
               );
             })}
           </div>
+          {studentsWithDebt.length > 6 && (
+            <p className="text-sm text-gray-500 mt-3 text-center">
+              + {studentsWithDebt.length - 6} autre{studentsWithDebt.length - 6 > 1 ? 's' : ''} étudiant{studentsWithDebt.length - 6 > 1 ? 's' : ''}
+            </p>
+          )}
         </div>
       )}
 
-      {/* Filters */}
-      <div className="card mb-6">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
+      {/* Filters & Table */}
+      <div className="card">
+        <div className="flex flex-wrap items-center gap-4 mb-5">
+          <div className="flex-1 min-w-[200px] relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
               type="text"
               placeholder="Rechercher par nom ou CIN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-input"
+              className="form-input pl-10"
             />
           </div>
           <div className="w-48">
@@ -418,79 +469,100 @@ function Payments() {
               <option value="Transfer">Virement</option>
             </select>
           </div>
+          <span className="text-sm text-gray-500">
+            {filteredPayments.length} paiement{filteredPayments.length !== 1 ? 's' : ''}
+          </span>
         </div>
-      </div>
 
-      {/* Payments Table */}
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Étudiant</th>
-              <th>CIN</th>
-              <th>Montant</th>
-              <th>Méthode</th>
-              <th>Facture</th>
-              <th>Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredPayments.length === 0 ? (
-              <tr>
-                <td colSpan="8" className="text-center py-8 text-gray-500">
-                  Aucun paiement trouvé
-                </td>
-              </tr>
-            ) : (
-              filteredPayments.map((payment) => {
-                const linkedInvoice = invoices.find(inv => inv.payment_id === payment.id);
-                return (
-                  <tr key={payment.id}>
-                    <td>{formatDate(payment.payment_date)}</td>
-                    <td>
-                      <Link
-                        href={`/${slug}/students/${payment.student_id}`}
-                        className="font-medium text-primary-600 hover:text-primary-700"
-                      >
-                        {payment.full_name}
-                      </Link>
-                    </td>
-                    <td>{payment.cin || '-'}</td>
-                    <td className="font-medium text-green-600">{formatCurrency(payment.amount)}</td>
-                    <td>
-                      <span className={`badge ${payment.payment_method === 'Cash' ? 'badge-success' : 'badge-info'}`}>
-                        {payment.payment_method === 'Cash' ? 'Espèces' : 'Virement'}
-                      </span>
-                    </td>
-                    <td>
-                      {linkedInvoice ? (
-                        <span className="text-xs font-mono font-medium text-primary-600">
-                          {linkedInvoice.invoice_number}
+        {/* Payments Table */}
+        {filteredPayments.length === 0 ? (
+          <div className="text-center py-12">
+            <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-gray-500">Aucun paiement trouvé</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-6">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Date</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Étudiant</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">CIN</th>
+                  <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Montant</th>
+                  <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Méthode</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Facture</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Notes</th>
+                  <th className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredPayments.map((payment) => {
+                  const linkedInvoice = invoices.find(inv => inv.payment_id === payment.id);
+                  return (
+                    <tr key={payment.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-3.5">
+                        <span className="text-sm text-gray-600">{formatDate(payment.payment_date)}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <Link
+                          href={`/${slug}/students/${payment.student_id}`}
+                          className="text-sm font-medium text-gray-900 hover:text-primary-600 transition-colors"
+                        >
+                          {payment.full_name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-sm text-gray-500 font-mono">{payment.cin || '-'}</span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="text-sm font-semibold text-green-600">{formatCurrency(payment.amount)}</span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          payment.payment_method === 'Cash'
+                            ? 'bg-green-50 text-green-700'
+                            : 'bg-blue-50 text-blue-700'
+                        }`}>
+                          {payment.payment_method === 'Cash' ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                          )}
+                          {payment.payment_method === 'Cash' ? 'Espèces' : 'Virement'}
                         </span>
-                      ) : (
-                        <span className="text-gray-400 text-xs">-</span>
-                      )}
-                    </td>
-                    <td className="text-gray-500 max-w-xs truncate">{payment.notes || '-'}</td>
-                    <td>
-                      <button
-                        onClick={() => handleDelete(payment)}
-                        className="btn btn-danger btn-sm"
-                        title="Supprimer"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {linkedInvoice ? (
+                          <span className="text-xs font-mono font-medium bg-primary-50 text-primary-700 px-2 py-0.5 rounded">
+                            {linkedInvoice.invoice_number}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-sm text-gray-500 max-w-[200px] truncate block">{payment.notes || '-'}</span>
+                      </td>
+                      <td className="px-6 py-3.5 text-center">
+                        <button
+                          onClick={() => handleDelete(payment)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          title="Supprimer"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Add Payment Modal */}

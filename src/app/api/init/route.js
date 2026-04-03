@@ -7,6 +7,6 @@ export async function GET() {
     return NextResponse.json({ success: true, message: 'Database initialized successfully' });
   } catch (error) {
     console.error('DB init error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

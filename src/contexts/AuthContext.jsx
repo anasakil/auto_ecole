@@ -42,9 +42,18 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    const slug = user?.slug;
+    const role = user?.role;
     await fetch('/api/auth', { method: 'DELETE' });
     setUser(null);
-    window.location.href = '/login';
+    // Redirect to the appropriate login page
+    if (role === 'super_admin') {
+      window.location.href = '/login';
+    } else if (slug) {
+      window.location.href = `/${slug}/login`;
+    } else {
+      window.location.href = '/login';
+    }
   }
 
   return (

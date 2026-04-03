@@ -9,6 +9,6 @@ export async function GET(request) {
 
     return NextResponse.json(await db.getSuperAdminDashboardStats());
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(error); return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

@@ -24,10 +24,12 @@ export function getTodayISO() {
 
 export function formatCurrency(amount) {
   if (amount === null || amount === undefined) return '0 MAD';
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return '0 MAD';
   return new Intl.NumberFormat('fr-MA', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2
-  }).format(amount) + ' MAD';
+  }).format(num) + ' MAD';
 }
 
 export function calculateRemainingDays(startDate, durationDays) {

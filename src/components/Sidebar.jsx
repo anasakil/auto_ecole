@@ -20,12 +20,14 @@ const menuPaths = [
   { path: '/settings', label: 'Paramètres', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onSchoolInfoLoaded }) {
   const pathname = usePathname();
   const { logout, user } = useAuth();
   const { slug } = useTenant();
   const [alertCounts, setAlertCounts] = useState({ total: 0, danger: 0 });
   const [collapsed, setCollapsed] = useState(false);
+  const [schoolName, setSchoolName] = useState('');
+  const [logoUrl, setLogoUrl] = useState(null);
 
   const menuItems = menuPaths.map(item => ({
     ...item,
@@ -40,32 +42,73 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch school info (name + logo)
+  useEffect(() => {
+    api.settings.get().then(async (data) => {
+      if (data) {
+        const name = data.school_name || '';
+        setSchoolName(name);
+        let base64Logo = null;
+        if (data.logo) {
+          try {
+            base64Logo = await api.files.getBase64(data.logo);
+            if (base64Logo) setLogoUrl(base64Logo);
+          } catch {}
+        }
+        if (onSchoolInfoLoaded) onSchoolInfoLoaded({ name, logoUrl: base64Logo });
+      }
+    }).catch(() => {});
+  }, []);
+
   return (
     <aside
-      className={`flex flex-col transition-all duration-300 ${
+      className={`flex flex-col transition-all duration-300 flex-shrink-0 ${
         collapsed ? 'w-[72px]' : 'w-64'
       }`}
       style={{
         background: 'linear-gradient(180deg, #6C5CE7 0%, #4834D4 100%)',
       }}
     >
-      {/* Logo */}
-      <div className={`flex items-center ${collapsed ? 'justify-center p-4' : 'justify-between px-5 py-5'}`}>
+      {/* School branding */}
+      <div className={`flex items-center ${collapsed ? 'justify-center p-4' : 'justify-between px-4 py-4'}`}>
         {!collapsed && (
-          <div>
-            <h1 className="text-lg font-bold text-white">Auto-École</h1>
-            <p className="text-xs text-white/60">Gestion des étudiants</p>
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {logoUrl ? (
+              <div className="w-10 h-10 rounded-xl bg-white flex-shrink-0 overflow-hidden shadow-sm">
+                <img src={logoUrl} alt={schoolName} className="w-full h-full object-contain p-0.5" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold text-white truncate">{schoolName || 'Auto-École'}</h1>
+              <p className="text-[10px] text-white/50 truncate">Gestion des étudiants</p>
+            </div>
           </div>
         )}
         {collapsed && (
-          <div className="w-11 h-11 rounded-[14px] bg-white/20 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">AE</span>
+          <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0">
+            {logoUrl ? (
+              <div className="w-full h-full bg-white p-0.5 rounded-xl">
+                <img src={logoUrl} alt={schoolName} className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div className="w-full h-full bg-white/20 flex items-center justify-center rounded-xl">
+                <span className="text-white font-bold text-xs">
+                  {schoolName ? schoolName.substring(0, 2).toUpperCase() : 'AE'}
+                </span>
+              </div>
+            )}
           </div>
         )}
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-white/10 text-white/70 transition-colors flex-shrink-0"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
@@ -75,7 +118,7 @@ export default function Sidebar() {
       </div>
 
       {/* Separator */}
-      <div className={`mx-auto bg-white/15 h-px ${collapsed ? 'w-10' : 'w-[calc(100%-40px)]'}`} />
+      <div className={`mx-auto bg-white/15 h-px ${collapsed ? 'w-10' : 'w-[calc(100%-32px)]'}`} />
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar">

@@ -2,9 +2,20 @@ import { NextResponse } from 'next/server';
 const bcrypt = require('bcryptjs');
 const { getAdminByUsername, initDb } = require('@/lib/database');
 const { generateToken, isAuthenticated } = require('@/lib/auth');
+const { checkRateLimit } = require('@/lib/rateLimit');
 
 export async function POST(request) {
   try {
+    // Rate limit: 5 login attempts per 15 minutes per IP
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const limit = checkRateLimit(`login:${ip}`, { maxAttempts: 5, windowMs: 15 * 60 * 1000 });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Trop de tentatives. Réessayez dans quelques minutes.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.resetMs / 1000)) } }
+      );
+    }
+
     await initDb();
     const { username, password } = await request.json();
 
@@ -38,8 +49,8 @@ export async function POST(request) {
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60, // 24 hours (matches TOKEN_EXPIRY)
       path: '/',
     });
 

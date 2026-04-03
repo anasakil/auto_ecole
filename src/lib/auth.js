@@ -1,10 +1,13 @@
 const jwt = require('jsonwebtoken');
 
-const TOKEN_EXPIRY = '7d';
+const TOKEN_EXPIRY = '24h';
 
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET environment variable is required');
+  if (secret.length < 32) {
+    console.warn('WARNING: JWT_SECRET should be at least 32 characters for security');
+  }
   return secret;
 }
 
