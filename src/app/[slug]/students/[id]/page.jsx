@@ -746,11 +746,11 @@ function StudentDetail() {
                 </div>
                 <div className="form-group mb-0">
                   <label className="form-label text-xs">Durée formation (jours)</label>
-                  <input type="number" value={editForm.training_duration_days} onChange={(e) => setEditForm(prev => ({ ...prev, training_duration_days: parseInt(e.target.value) || 30 }))} className="form-input text-sm" />
+                  <input type="number" value={editForm.training_duration_days || ''} onChange={(e) => setEditForm(prev => ({ ...prev, training_duration_days: parseInt(e.target.value) || 30 }))} className="form-input text-sm" placeholder="Ex: 30" />
                 </div>
                 <div className="form-group mb-0">
                   <label className="form-label text-xs">Prix total</label>
-                  <input type="number" value={editForm.total_price} onChange={(e) => setEditForm(prev => ({ ...prev, total_price: parseFloat(e.target.value) || 0 }))} className="form-input text-sm" />
+                  <input type="number" value={editForm.total_price || ''} onChange={(e) => setEditForm(prev => ({ ...prev, total_price: parseFloat(e.target.value) || 0 }))} className="form-input text-sm" placeholder="Ex: 3500" />
                 </div>
               </div>
             )}
@@ -872,8 +872,8 @@ function StudentDetail() {
                         <td>{formatDate(payment.payment_date)}</td>
                         <td className="font-medium text-green-600">{formatCurrency(payment.amount)}</td>
                         <td>
-                          <span className={`badge ${payment.payment_method === 'Cash' ? 'badge-success' : 'badge-info'}`}>
-                            {payment.payment_method === 'Cash' ? 'Espèces' : 'Virement'}
+                          <span className={`badge ${payment.payment_method === 'Cash' ? 'badge-success' : payment.payment_method === 'Cheque' ? 'badge-warning' : payment.payment_method === 'TPE' ? 'badge-orange' : 'badge-info'}`}>
+                            {PAYMENT_METHODS.find(m => m.value === payment.payment_method)?.label || payment.payment_method}
                           </span>
                         </td>
                         <td>
@@ -1590,11 +1590,12 @@ function StudentDetail() {
             <label className="form-label">Montant (MAD)</label>
             <input
               type="number"
-              value={paymentForm.amount}
+              value={paymentForm.amount || ''}
               onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
               className="form-input"
               min="0"
               step="0.01"
+              placeholder="Ex: 500"
               required
             />
           </div>
@@ -1794,11 +1795,12 @@ function StudentDetail() {
             <label className="form-label">Durée (minutes)</label>
             <input
               type="number"
-              value={stageForm.duration_minutes}
+              value={stageForm.duration_minutes || ''}
               onChange={(e) => setStageForm({ ...stageForm, duration_minutes: parseInt(e.target.value) || 60 })}
               className="form-input"
               min="15"
               step="15"
+              placeholder="Ex: 60"
             />
           </div>
           <div className="form-group">

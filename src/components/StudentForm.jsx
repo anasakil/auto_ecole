@@ -271,7 +271,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
             </select>
           </FormField>
           <FormField label="Prix Total (MAD)" name="total_price" error={errors.total_price}>
-            <input type="number" name="total_price" value={formData.total_price} onChange={handleChange} min="0" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${errors.total_price ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
+            <input type="number" name="total_price" value={formData.total_price || ''} onChange={handleChange} min="0" placeholder="Ex: 3500" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${errors.total_price ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
           </FormField>
           <FormField label="Statut" name="status">
             <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white">
@@ -391,7 +391,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
               <input type="date" name="training_start_date" value={formData.training_start_date} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
             </FormField>
             <FormField label="Durée formation (jours)" name="training_duration_days" error={errors.training_duration_days}>
-              <input type="number" name="training_duration_days" value={formData.training_duration_days} onChange={handleChange} min="1" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${errors.training_duration_days ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
+              <input type="number" name="training_duration_days" value={formData.training_duration_days || ''} onChange={handleChange} min="1" placeholder="Ex: 30" className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${errors.training_duration_days ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} />
             </FormField>
           </div>
           <div className="bg-gray-50 rounded-xl p-6">

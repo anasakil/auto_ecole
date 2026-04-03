@@ -269,11 +269,12 @@ function Settings() {
               <input
                 type="number"
                 name="default_training_days"
-                value={settings.default_training_days}
+                value={settings.default_training_days || ''}
                 onChange={handleChange}
                 className="form-input"
                 min="1"
                 max="365"
+                placeholder="Ex: 30"
               />
               <p className="text-sm text-gray-500 mt-1">
                 Cette durée sera appliquée par défaut aux nouveaux étudiants

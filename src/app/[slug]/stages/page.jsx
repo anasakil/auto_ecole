@@ -515,11 +515,12 @@ function Stages() {
               <label className="form-label">Durée (min)</label>
               <input
                 type="number"
-                value={formData.duration_minutes}
+                value={formData.duration_minutes || ''}
                 onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 60 })}
                 className="form-input"
                 min="15"
                 step="15"
+                placeholder="Ex: 60"
               />
             </div>
           </div>

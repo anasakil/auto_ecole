@@ -267,15 +267,15 @@ function Students() {
     },
     {
       key: 'license_type',
-      header: 'Permis',
-      render: (value) => <Badge variant="info">Permis {value}</Badge>,
-    },
-    {
-      key: 'status',
-      header: 'Statut',
-      render: (value) => {
-        const variant = value === 'En formation' ? 'primary' : value === 'Permis obtenu' ? 'success' : 'gray';
-        return <Badge variant={variant}>{value}</Badge>;
+      header: 'Permis / Statut',
+      render: (value, student) => {
+        const statusVariant = student.status === 'En formation' ? 'primary' : student.status === 'Permis obtenu' ? 'success' : 'gray';
+        return (
+          <div className="flex flex-wrap gap-1 items-center">
+            <Badge variant="info">Permis {value}</Badge>
+            <Badge variant={statusVariant}>{student.status}</Badge>
+          </div>
+        );
       },
     },
     {

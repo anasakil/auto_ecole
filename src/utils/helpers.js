@@ -96,6 +96,8 @@ export const STUDENT_STATUSES = [
 export const PAYMENT_METHODS = [
   { value: 'Cash', label: 'Espèces' },
   { value: 'Transfer', label: 'Virement' },
+  { value: 'Cheque', label: 'Chèque' },
+  { value: 'TPE', label: 'TPE' },
 ];
 
 export const STAGE_TYPES = [

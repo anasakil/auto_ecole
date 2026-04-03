@@ -269,13 +269,14 @@ function Offers() {
             <label className="form-label">Prix (MAD) *</label>
             <input
               type="number"
-              value={formData.price}
+              value={formData.price || ''}
               onChange={(e) => {
                 setFormData({ ...formData, price: parseFloat(e.target.value) || 0 });
                 if (errors.price) setErrors({ ...errors, price: '' });
               }}
               className={`form-input ${errors.price ? 'border-red-500 bg-red-50' : ''}`}
               min="0"
+              placeholder="Ex: 3500"
               step="0.01"
               required
             />

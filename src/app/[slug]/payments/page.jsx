@@ -239,6 +239,12 @@ function Payments() {
   const transferAmount = filteredPayments
     .filter((p) => p.payment_method === 'Transfer')
     .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  const chequeAmount = filteredPayments
+    .filter((p) => p.payment_method === 'Cheque')
+    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  const tpeAmount = filteredPayments
+    .filter((p) => p.payment_method === 'TPE')
+    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
 
   // Get students with remaining balance
   const studentsWithDebt = students.filter((s) => {
@@ -252,7 +258,7 @@ function Payments() {
     { key: 'full_name', label: 'Étudiant' },
     { key: 'cin', label: 'CIN' },
     { key: 'amount', label: 'Montant', accessor: (p) => formatCurrency(p.amount) },
-    { key: 'payment_method', label: 'Méthode', accessor: (p) => p.payment_method === 'Cash' ? 'Espèces' : 'Virement' },
+    { key: 'payment_method', label: 'Méthode', accessor: (p) => PAYMENT_METHODS.find(m => m.value === p.payment_method)?.label || p.payment_method },
     { key: 'notes', label: 'Notes' },
   ];
 
@@ -387,6 +393,32 @@ function Payments() {
             </div>
           </div>
         </div>
+        <div className="card bg-gradient-to-br from-purple-50 to-white border border-purple-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-purple-100 rounded-xl">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Chèques</p>
+              <p className="text-xl font-bold text-purple-600">{formatCurrency(chequeAmount)}</p>
+            </div>
+          </div>
+        </div>
+        <div className="card bg-gradient-to-br from-orange-50 to-white border border-orange-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-orange-100 rounded-xl">
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">TPE</p>
+              <p className="text-xl font-bold text-orange-600">{formatCurrency(tpeAmount)}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Students with remaining balance */}
@@ -467,6 +499,8 @@ function Payments() {
               <option value="">Toutes les méthodes</option>
               <option value="Cash">Espèces</option>
               <option value="Transfer">Virement</option>
+              <option value="Cheque">Chèque</option>
+              <option value="TPE">TPE</option>
             </select>
           </div>
           <span className="text-sm text-gray-500">
@@ -523,14 +557,22 @@ function Payments() {
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
                           payment.payment_method === 'Cash'
                             ? 'bg-green-50 text-green-700'
+                            : payment.payment_method === 'Cheque'
+                            ? 'bg-purple-50 text-purple-700'
+                            : payment.payment_method === 'TPE'
+                            ? 'bg-orange-50 text-orange-700'
                             : 'bg-blue-50 text-blue-700'
                         }`}>
                           {payment.payment_method === 'Cash' ? (
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                          ) : payment.payment_method === 'Cheque' ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          ) : payment.payment_method === 'TPE' ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                           ) : (
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
                           )}
-                          {payment.payment_method === 'Cash' ? 'Espèces' : 'Virement'}
+                          {PAYMENT_METHODS.find(m => m.value === payment.payment_method)?.label || payment.payment_method}
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
@@ -618,7 +660,7 @@ function Payments() {
             <label className="form-label">Montant (MAD) *</label>
             <input
               type="number"
-              value={formData.amount}
+              value={formData.amount || ''}
               onChange={(e) => {
                 setFormData({ ...formData, amount: e.target.value });
                 if (errors.amount) setErrors({ ...errors, amount: '' });
@@ -626,6 +668,7 @@ function Payments() {
               className={`form-input ${errors.amount ? 'border-red-500 bg-red-50' : ''}`}
               min="0"
               step="0.01"
+              placeholder="Ex: 500"
               required
             />
             {errors.amount && (
@@ -762,7 +805,7 @@ function Payments() {
                       <div className="flex-1">
                         <input
                           type="number"
-                          value={inst.amount}
+                          value={inst.amount || ''}
                           onChange={(e) => updateInstallment(index, 'amount', parseFloat(e.target.value) || 0)}
                           className="form-input"
                           placeholder="Montant"

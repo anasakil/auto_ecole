@@ -5,7 +5,7 @@ import Link from 'next/link';
 import api from '@/utils/api';
 import Modal from '@/components/Modal';
 import ExportButton from '@/components/ExportButton';
-import { formatDate, formatCurrency, getTodayISO } from '@/utils/helpers';
+import { formatDate, formatCurrency, getTodayISO, PAYMENT_METHODS } from '@/utils/helpers';
 import { TablePageSkeleton } from '@/components/skeletons';
 import { useTenant } from '@/contexts/TenantContext';
 
@@ -397,8 +397,8 @@ function Invoices() {
                     <td className="font-medium">{formatCurrency(invoice.amount)}</td>
                     <td>
                       {linkedPayment ? (
-                        <span className={`badge ${linkedPayment.payment_method === 'Cash' ? 'badge-success' : 'badge-info'}`}>
-                          {linkedPayment.payment_method === 'Cash' ? 'Espèces' : 'Virement'}
+                        <span className={`badge ${linkedPayment.payment_method === 'Cash' ? 'badge-success' : linkedPayment.payment_method === 'Cheque' ? 'badge-warning' : linkedPayment.payment_method === 'TPE' ? 'badge-orange' : 'badge-info'}`}>
+                          {PAYMENT_METHODS.find(m => m.value === linkedPayment.payment_method)?.label || linkedPayment.payment_method}
                         </span>
                       ) : (
                         <span className="text-xs text-gray-400">Manuelle</span>
@@ -478,11 +478,12 @@ function Invoices() {
             <label className="form-label">Montant (MAD) *</label>
             <input
               type="number"
-              value={formData.amount}
+              value={formData.amount || ''}
               onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
               className="form-input"
               min="0"
               step="0.01"
+              placeholder="Ex: 1000"
               required
             />
           </div>
