@@ -6,6 +6,7 @@ export function setTenantSlug(slug) {
 }
 
 function tenantFetch(url, options = {}) {
+  options.credentials = 'include';
   if (currentTenantSlug) {
     options.headers = {
       ...options.headers,
@@ -118,7 +119,7 @@ const api = {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('subfolder', subfolder || 'documents');
-      const options = { method: 'POST', body: formData };
+      const options = { method: 'POST', body: formData, credentials: 'include' };
       if (currentTenantSlug) {
         options.headers = { 'x-tenant-slug': currentTenantSlug };
       }

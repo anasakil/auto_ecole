@@ -2,8 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal';
 import api from '@/utils/api';
+import { useTenant } from '@/contexts/TenantContext';
 
 function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
+  const { slug } = useTenant();
   const [fileData, setFileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,15 +29,21 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.files.getBase64(filePath);
+      const resp = await fetch(`/api/files?path=${encodeURIComponent(filePath)}`, {
+        credentials: 'include',
+        headers: slug ? { 'x-tenant-slug': slug } : {},
+      });
+      const json = await resp.json();
+      console.log('[DocumentViewer] files API response:', resp.status, json?.success, json?.error, json?.data ? 'has data' : 'no data');
+      const data = json?.data;
       if (data && typeof data === 'string' && data.startsWith('data:')) {
         setFileData(data);
       } else {
-        setError('Fichier introuvable. Veuillez régénérer le document.');
+        setError(`Fichier introuvable (${resp.status}${json?.error ? ': ' + json.error : ''}). Veuillez régénérer le document.`);
       }
     } catch (err) {
-      console.error('Error loading file:', err);
-      setError('Erreur lors du chargement du fichier.');
+      console.error('[DocumentViewer] Error loading file:', err);
+      setError('Erreur lors du chargement du fichier: ' + err.message);
     } finally {
       setLoading(false);
     }
