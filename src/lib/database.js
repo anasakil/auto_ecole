@@ -1049,7 +1049,11 @@ async function createDocument(autoEcoleId, doc) {
 }
 
 async function getDocumentByPath(filePath, autoEcoleId) {
-  return queryOne('SELECT * FROM documents WHERE file_path = $1 AND auto_ecole_id = $2', [filePath, autoEcoleId]);
+  if (autoEcoleId) {
+    return queryOne('SELECT * FROM documents WHERE file_path = $1 AND auto_ecole_id = $2', [filePath, autoEcoleId]);
+  }
+  // No tenant filter — search across all tenants (used as fallback for file serving)
+  return queryOne('SELECT * FROM documents WHERE file_path = $1', [filePath]);
 }
 
 async function getDocumentsByStudent(studentId, autoEcoleId) {

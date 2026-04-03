@@ -103,39 +103,41 @@ export async function GET(request) {
 
     const normalizedPath = rawPath.replace(/\\/g, '/');
 
-    // On Vercel: try DB first (files in /tmp don't persist across invocations)
+    // Helper: try DB lookup with both slash variants and with/without tenant filter
+    async function tryDb(path) {
+      const paths = [path, path.replace(/\//g, '\\')];
+      for (const p of paths) {
+        // Try with tenant filter first, then without (for profile images not linked to a document)
+        let doc = auth.autoEcoleId ? await db.getDocumentByPath(p, auth.autoEcoleId) : null;
+        if (!doc) doc = await db.getDocumentByPath(p, null);
+        if (doc?.file_content) return doc.file_content;
+      }
+      return null;
+    }
+
+    // Always try DB first — base64 content is always stored there for Vercel compatibility
+    try {
+      const content = await tryDb(normalizedPath);
+      if (content) return NextResponse.json({ data: content });
+    } catch (dbErr) {
+      console.error('[files GET] DB lookup error:', dbErr);
+    }
+
+    // Try local filesystem (dev) or /tmp (Vercel)
+    const candidates = [fullPath];
     if (process.env.VERCEL) {
-      try {
-        let doc = await db.getDocumentByPath(normalizedPath, auth.autoEcoleId);
-        if (!doc) {
-          doc = await db.getDocumentByPath(normalizedPath.replace(/\//g, '\\'), auth.autoEcoleId);
-        }
-        if (doc?.file_content) return NextResponse.json({ data: doc.file_content });
-      } catch (dbErr) {
-        console.error('[files GET] DB fallback error:', dbErr);
-      }
-
-      const tmpResolved = resolveAllowedPath(normalizedPath.replace(/^uploads/, '/tmp'));
-      if (tmpResolved && existsSync(tmpResolved)) {
-        const buf = await readFile(tmpResolved);
-        return NextResponse.json({ data: toBase64(tmpResolved, buf) });
-      }
-      return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
+      const tmpResolved = resolveAllowedPath(normalizedPath.replace(/^uploads\//, '/tmp/'));
+      if (tmpResolved) candidates.push(tmpResolved);
     }
 
-    if (!existsSync(fullPath)) {
-      // Fallback to DB
-      try {
-        const doc = await db.getDocumentByPath(normalizedPath, auth.autoEcoleId);
-        if (doc?.file_content) return NextResponse.json({ data: doc.file_content });
-      } catch (dbErr) {
-        console.error('[files GET] DB fallback error:', dbErr);
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        const buf = await readFile(candidate);
+        return NextResponse.json({ data: toBase64(candidate, buf) });
       }
-      return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
     }
 
-    const buf = await readFile(fullPath);
-    return NextResponse.json({ data: toBase64(fullPath, buf) });
+    return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
   } catch (error) {
     console.error('[files GET]', error);
     return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
