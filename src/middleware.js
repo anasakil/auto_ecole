@@ -25,17 +25,12 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  // Block /api/init in production
-  if (pathname.startsWith('/api/init') && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not available' }, { status: 404 });
-  }
-
   // Allow public routes
   if (
     pathname === '/login' ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/ecoles/') ||
-    (pathname.startsWith('/api/init') && process.env.NODE_ENV !== 'production')
+    pathname.startsWith('/api/init')
   ) {
     return addSecurityHeaders(NextResponse.next());
   }

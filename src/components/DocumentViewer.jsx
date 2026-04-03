@@ -80,35 +80,20 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
   function handleOpenNewTab() {
     const url = makeBlobUrl() || fileData;
     if (!url) return;
-    const win = window.open('', '_blank');
-    if (!win) {
-      // popup blocked — fallback to direct link
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.click();
-      return;
-    }
-    win.document.write(
-      `<html><head><title>${doc?.name || 'PDF'}</title><style>*{margin:0;padding:0;} body,html{height:100%;} embed{display:block;width:100%;height:100%;}</style></head>` +
-      `<body><embed src="${url}" type="application/pdf" /></body></html>`
-    );
-    win.document.close();
+    // Navigate directly to the blob/data URL — avoids X-Frame-Options and CSP issues
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function handlePrint() {
     if (!fileData) return;
-    const fileType = getFileType();
-    const win = window.open('', '_blank');
-    if (!win) return;
-    if (fileType === 'image') {
-      win.document.write(`<html><head><title>Impression</title><style>body{margin:0;}img{max-width:100%;}</style></head><body><img src="${fileData}"/><script>window.onload=function(){window.print();}<\/script></body></html>`);
-    } else {
-      const url = makeBlobUrl() || fileData;
-      win.document.write(`<html><head><title>Impression</title></head><body style="margin:0;"><embed src="${url}" type="application/pdf" width="100%" height="100%"/><script>setTimeout(function(){window.print();},1200);<\/script></body></html>`);
-    }
-    win.document.close();
+    // Open PDF/image directly in new tab and let user print from there
+    handleOpenNewTab();
   }
 
   const fileType = getFileType();
