@@ -225,13 +225,15 @@ function Payments() {
     }
   }
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      payment.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (payment.cin && payment.cin.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesMethod = !filterMethod || payment.payment_method === filterMethod;
-    return matchesSearch && matchesMethod;
-  });
+  const filteredPayments = payments
+    .filter((payment) => {
+      const matchesSearch =
+        payment.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (payment.cin && payment.cin.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesMethod = !filterMethod || payment.payment_method === filterMethod;
+      return matchesSearch && matchesMethod;
+    })
+    .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
 
   const { page: paymentsPage, setPage: setPaymentsPage, totalPages: paymentsTotalPages, paginatedData: paginatedPayments } = usePagination(filteredPayments, 20);
 
@@ -481,9 +483,10 @@ function Payments() {
 
       {/* Filters & Table */}
       <div className="card">
-        <div className="flex flex-wrap items-center gap-4 mb-5">
-          <div className="flex-1 min-w-[200px] relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+          {/* Search */}
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -491,14 +494,28 @@ function Payments() {
               placeholder="Rechercher par nom ou CIN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-input pl-10"
+              className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all placeholder-gray-400"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
-          <div className="w-48">
+          {/* Method filter */}
+          <div className="relative sm:w-52">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
             <select
               value={filterMethod}
               onChange={(e) => setFilterMethod(e.target.value)}
-              className="form-select"
+              className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all appearance-none"
             >
               <option value="">Toutes les méthodes</option>
               <option value="Cash">Espèces</option>
@@ -507,9 +524,15 @@ function Payments() {
               <option value="TPE">TPE</option>
             </select>
           </div>
-          <span className="text-sm text-gray-500">
-            {filteredPayments.length} paiement{filteredPayments.length !== 1 ? 's' : ''}
-          </span>
+          {/* Count badge */}
+          <div className="flex items-center">
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-100 px-3 py-2 rounded-xl whitespace-nowrap">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              {filteredPayments.length} paiement{filteredPayments.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
 
         {/* Payments Table */}

@@ -57,16 +57,13 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
     return 'other';
   }
 
-  function makeBlobUrl() {
+  async function makeBlobUrl() {
     if (!fileData) return null;
     if (blobUrlRef.current) return blobUrlRef.current;
     try {
-      const parts = fileData.split(',');
-      const mime = parts[0].match(/:(.*?);/)[1];
-      const raw = atob(parts[1]);
-      const arr = new Uint8Array(raw.length);
-      for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-      const blob = new Blob([arr], { type: mime });
+      // Use fetch on the data URI — browser handles base64 decode natively and correctly
+      const res = await fetch(fileData);
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       blobUrlRef.current = url;
       return url;
@@ -75,20 +72,21 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
     }
   }
 
-  function handleDownload() {
+  async function handleDownload() {
     if (!fileData) return;
-    const link = window.document.createElement('a');
-    link.href = fileData;
-    link.download = doc?.name || 'document';
-    window.document.body.appendChild(link);
+    const url = await makeBlobUrl();
+    const link = document.createElement('a');
+    link.href = url || fileData;
+    link.download = (doc?.name || 'document') + (fileData.startsWith('data:application/pdf') ? '.pdf' : '');
+    document.body.appendChild(link);
     link.click();
-    window.document.body.removeChild(link);
+    document.body.removeChild(link);
   }
 
-  function handleOpenNewTab() {
-    const url = makeBlobUrl() || fileData;
+  async function handleOpenNewTab() {
+    if (!fileData) return;
+    const url = await makeBlobUrl();
     if (!url) return;
-    // Navigate directly to the blob/data URL — avoids X-Frame-Options and CSP issues
     const a = document.createElement('a');
     a.href = url;
     a.target = '_blank';
@@ -100,7 +98,6 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
 
   function handlePrint() {
     if (!fileData) return;
-    // Open PDF/image directly in new tab and let user print from there
     handleOpenNewTab();
   }
 
