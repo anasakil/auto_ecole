@@ -3,6 +3,7 @@ import { writeFile, readFile, unlink, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 const { requireAuth } = require('@/lib/tenant');
+const db = require('@/lib/database');
 
 function getUploadsDir(subfolder = '') {
   const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
@@ -52,7 +53,7 @@ export async function POST(request) {
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
 
-    const relativePath = path.join('uploads', subfolder, fileName);
+    const relativePath = ['uploads', subfolder, fileName].join('/');
     return NextResponse.json({ filePath: relativePath, fileName });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -65,32 +66,68 @@ export async function GET(request) {
     if (!auth) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const filePath = searchParams.get('path');
+    const rawPath = searchParams.get('path');
 
-    if (!filePath) {
+    if (!rawPath) {
       return NextResponse.json({ error: 'No file path provided' }, { status: 400 });
     }
+
+    // Normalize path separators (Windows backslashes → forward slashes)
+    const filePath = rawPath.replace(/\\/g, '/');
 
     // Try both local uploads and /tmp (Vercel)
     let fullPath = path.resolve(process.cwd(), filePath);
 
     // Path traversal protection
-    const uploadsBase = path.resolve(process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads'));
-    if (!fullPath.startsWith(uploadsBase) && !fullPath.startsWith(path.resolve(process.cwd(), 'public'))) {
+    const uploadsBase = path.resolve(process.cwd(), 'uploads');
+    const publicBase = path.resolve(process.cwd(), 'public');
+    const tmpBase = '/tmp'; // Vercel ephemeral storage
+
+    const isAuthorized = fullPath.startsWith(uploadsBase) ||
+                       fullPath.startsWith(publicBase) ||
+                       (process.env.VERCEL && filePath.startsWith('uploads'));
+
+    if (!isAuthorized) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
     }
 
-    if (!existsSync(fullPath)) {
+    // On Vercel, try DB first since /tmp is ephemeral and files won't persist across invocations
+    if (process.env.VERCEL) {
+      try {
+        // Try both forward-slash and backslash versions of the path
+        let doc = await db.getDocumentByPath(filePath, auth.autoEcoleId);
+        if (!doc) {
+          const backslashPath = filePath.replace(/\//g, '\\');
+          doc = await db.getDocumentByPath(backslashPath, auth.autoEcoleId);
+        }
+        if (doc && doc.file_content) {
+          return NextResponse.json({ data: doc.file_content });
+        }
+      } catch (dbError) {
+        console.error('Database fallback error:', dbError);
+      }
+
+      // Then try /tmp as last resort
       const tmpPath = filePath.replace(/^uploads/, '/tmp');
       const resolvedTmpPath = path.resolve(tmpPath);
-      if (!resolvedTmpPath.startsWith('/tmp')) {
-        return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
-      }
       if (existsSync(resolvedTmpPath)) {
         fullPath = resolvedTmpPath;
       } else {
         return NextResponse.json({ error: 'File not found' }, { status: 404 });
       }
+    }
+
+    if (!existsSync(fullPath)) {
+      // Fallback: Check database for file content
+      try {
+        const doc = await db.getDocumentByPath(filePath, auth.autoEcoleId);
+        if (doc && doc.file_content) {
+          return NextResponse.json({ data: doc.file_content });
+        }
+      } catch (dbError) {
+        console.error('Database fallback error:', dbError);
+      }
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
     const fileBuffer = await readFile(fullPath);

@@ -232,6 +232,7 @@ async function initDb() {
       file_type VARCHAR(50),
       file_size INT,
       description TEXT,
+      file_content TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -263,6 +264,15 @@ async function initDb() {
       END $$
     `);
   }
+
+  // Migration: add file_content column to documents table if missing
+  await db.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'documents' AND column_name = 'file_content') THEN
+        ALTER TABLE documents ADD COLUMN file_content TEXT;
+      END IF;
+    END $$
+  `);
 
   // Migration for settings table
   await db.query(`
@@ -987,10 +997,14 @@ async function deleteInvoice(id, autoEcoleId) {
 // ==================== DOCUMENTS ====================
 async function createDocument(autoEcoleId, doc) {
   const result = await queryOne(
-    'INSERT INTO documents (auto_ecole_id, student_id, type, name, file_path, file_type, file_size, description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-    [autoEcoleId, doc.student_id, doc.type, doc.name, doc.file_path, doc.file_type || null, doc.file_size || null, doc.description || null]
+    'INSERT INTO documents (auto_ecole_id, student_id, type, name, file_path, file_type, file_size, description, file_content) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+    [autoEcoleId, doc.student_id, doc.type, doc.name, doc.file_path, doc.file_type || null, doc.file_size || null, doc.description || null, doc.file_content || null]
   );
   return { id: result.id };
+}
+
+async function getDocumentByPath(filePath, autoEcoleId) {
+  return queryOne('SELECT * FROM documents WHERE file_path = $1 AND auto_ecole_id = $2', [filePath, autoEcoleId]);
 }
 
 async function getDocumentsByStudent(studentId, autoEcoleId) {
@@ -1185,7 +1199,7 @@ module.exports = {
   // Invoices
   generateInvoiceNumber, createInvoice, getInvoiceById, getInvoicesByStudent, getAllInvoices, updateInvoiceStatus, deleteInvoice,
   // Documents
-  createDocument, getDocumentsByStudent, getDocumentById, deleteDocument, getAllDocuments,
+  createDocument, getDocumentsByStudent, getDocumentById, getDocumentByPath, deleteDocument, getAllDocuments,
   // Offers
   getAllOffers, createOffer, updateOffer, deleteOffer,
   // Dashboard & Settings

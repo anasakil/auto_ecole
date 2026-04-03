@@ -126,7 +126,8 @@ export async function POST(request) {
     const pdfBytes = await flatDoc.save();
     fs.writeFileSync(filePath, pdfBytes);
 
-    const relativePath = path.join('uploads', 'contracts', fileName);
+    const relativePath = ['uploads', 'contracts', fileName].join('/');
+    const base64Content = `data:application/pdf;base64,${pdfBytes.toString('base64')}`;
     const docRecord = await db.createDocument(tenant.autoEcoleId, {
       student_id: studentId,
       type: 'Contrat',
@@ -134,7 +135,8 @@ export async function POST(request) {
       file_path: relativePath,
       file_type: 'pdf',
       file_size: pdfBytes.length,
-      description: `Contrat de formation généré automatiquement le ${dateStr}`
+      description: `Contrat de formation généré automatiquement le ${dateStr}`,
+      file_content: base64Content
     });
 
     return NextResponse.json({ success: true, path: relativePath, documentId: docRecord.id });

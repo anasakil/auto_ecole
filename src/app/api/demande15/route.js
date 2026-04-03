@@ -156,11 +156,13 @@ export async function POST(request) {
     const filePath = path.join(demandesDir, fileName);
     fs.writeFileSync(filePath, pdfBytes);
 
-    const relativePath = path.join('uploads', 'demandes', fileName);
+    const relativePath = ['uploads', 'demandes', fileName].join('/');
+    const base64Content = `data:application/pdf;base64,${pdfBytes.toString('base64')}`;
     const docRecord = await db.createDocument(tenant.autoEcoleId, {
       student_id: studentId, type: 'Demande 15j', name: `Demande 15j - ${student.full_name}`,
       file_path: relativePath, file_type: 'pdf', file_size: pdfBytes.length,
-      description: `Demande d'avancement 15 jours generee automatiquement le ${dateStr}`
+      description: `Demande d'avancement 15 jours generee automatiquement le ${dateStr}`,
+      file_content: base64Content
     });
 
     return NextResponse.json({ success: true, path: relativePath, documentId: docRecord.id });
