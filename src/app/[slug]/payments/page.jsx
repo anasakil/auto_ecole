@@ -25,6 +25,8 @@ function Payments() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMethod, setFilterMethod] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -225,13 +227,17 @@ function Payments() {
     }
   }
 
+  const availableYears = [...new Set(payments.map(p => p.payment_date ? new Date(p.payment_date).getFullYear() : null).filter(Boolean))].sort((a,b) => b-a);
+
   const filteredPayments = payments
     .filter((payment) => {
       const matchesSearch =
         payment.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (payment.cin && payment.cin.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesMethod = !filterMethod || payment.payment_method === filterMethod;
-      return matchesSearch && matchesMethod;
+      const matchMonth = !filterMonth || (payment.payment_date && new Date(payment.payment_date).getMonth() + 1 === parseInt(filterMonth));
+      const matchYear = !filterYear || (payment.payment_date && new Date(payment.payment_date).getFullYear() === parseInt(filterYear));
+      return matchesSearch && matchesMethod && matchMonth && matchYear;
     })
     .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
 
@@ -507,6 +513,16 @@ function Payments() {
               </button>
             )}
           </div>
+          {/* Month filter */}
+          <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-36">
+            <option value="">Tous les mois</option>
+            {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+          {/* Year filter */}
+          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-28">
+            <option value="">Toutes années</option>
+            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
           {/* Method filter */}
           <div className="relative sm:w-52">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">

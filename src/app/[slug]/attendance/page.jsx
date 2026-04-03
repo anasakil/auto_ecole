@@ -5,6 +5,120 @@ import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import api from '@/utils/api';
 import { formatDate, getStatusBadgeClass } from '@/utils/helpers';
 import { useTenant } from '@/contexts/TenantContext';
+import { usePagination } from '@/hooks/usePagination';
+import Pagination from '@/components/data/Pagination';
+
+function QuickAttendance({ students, presentStudents, onQuickAttendance }) {
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'present' | 'absent'
+  const PAGE_SIZE = 18;
+
+  const activeStudents = students.filter((s) => s.status === 'En formation');
+
+  const filtered = activeStudents.filter((s) => {
+    const matchSearch =
+      s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      (s.cin && s.cin.toLowerCase().includes(search.toLowerCase()));
+    const isPresent = presentStudents.some((a) => a.student_id === s.id);
+    if (filterStatus === 'present') return matchSearch && isPresent;
+    if (filterStatus === 'absent') return matchSearch && !isPresent;
+    return matchSearch;
+  });
+
+  const { page, setPage, totalPages, paginatedData } = usePagination(filtered, PAGE_SIZE);
+
+  return (
+    <div className="card mt-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Enregistrement Rapide</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Absent → Entrée &nbsp;|&nbsp; Présent → Sortie</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+            {activeStudents.length} étudiants
+          </span>
+        </div>
+      </div>
+
+      {/* Search + filter */}
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Rechercher par nom ou CIN..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all placeholder-gray-400"
+          />
+          {search && (
+            <button onClick={() => { setSearch(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+        </div>
+        <div className="flex gap-1.5">
+          {[['all', 'Tous'], ['absent', 'Absents'], ['present', 'Présents']].map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => { setFilterStatus(val); setPage(1); }}
+              className={`px-3 py-2 text-xs font-medium rounded-xl border transition-all ${
+                filterStatus === val
+                  ? val === 'present' ? 'bg-green-500 text-white border-green-500'
+                    : val === 'absent' ? 'bg-red-500 text-white border-red-500'
+                    : 'bg-primary-600 text-white border-primary-600'
+                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-center text-gray-400 py-8 text-sm">Aucun étudiant trouvé</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            {paginatedData.map((student) => {
+              const isPresent = presentStudents.some((a) => a.student_id === student.id);
+              return (
+                <button
+                  key={student.id}
+                  onClick={() => onQuickAttendance(student.id)}
+                  className={`p-3 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95 ${
+                    isPresent
+                      ? 'bg-green-50 text-green-800 hover:bg-green-100 border-2 border-green-300 shadow-sm'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-center mb-1.5">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isPresent ? 'bg-green-200 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                      {student.full_name.charAt(0)}
+                    </div>
+                  </div>
+                  <p className="truncate text-xs font-semibold leading-tight">{student.full_name}</p>
+                  <p className={`text-xs mt-0.5 ${isPresent ? 'text-green-600' : 'text-gray-400'}`}>
+                    {isPresent ? '✓ Présent' : 'Absent'}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+          {totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 function Attendance() {
   const [students, setStudents] = useState([]);
@@ -542,45 +656,11 @@ function Attendance() {
       </div>
 
       {/* Quick Entry for Students */}
-      <div className="card mt-6">
-        <h2 className="card-header">Enregistrement Rapide</h2>
-        <p className="text-sm text-gray-500 mb-4">{"Cliquez sur un étudiant: Absent -> Entrée, Présent -> Sortie"}</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {students
-            .filter((s) => s.status === 'En formation')
-            .slice(0, 18)
-            .map((student) => {
-              const isPresent = presentStudents.some((a) => a.student_id === student.id);
-              return (
-                <button
-                  key={student.id}
-                  onClick={() => quickAttendance(student.id)}
-                  className={`p-3 rounded-lg text-sm font-medium transition-all transform hover:scale-105 ${
-                    isPresent
-                      ? 'bg-green-100 text-green-800 hover:bg-green-200 border-2 border-green-300'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center justify-center mb-1">
-                    {isPresent ? (
-                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                  </div>
-                  <p className="truncate">{student.full_name}</p>
-                  <p className={`text-xs ${isPresent ? 'text-green-600' : 'text-gray-500'}`}>
-                    {isPresent ? 'Présent' : 'Absent'}
-                  </p>
-                </button>
-              );
-            })}
-        </div>
-      </div>
+      <QuickAttendance
+        students={students}
+        presentStudents={presentStudents}
+        onQuickAttendance={quickAttendance}
+      />
     </div>
   );
 }

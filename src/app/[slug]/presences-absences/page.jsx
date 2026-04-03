@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import api from '@/utils/api';
 import { formatDate } from '@/utils/helpers';
 import ExportButton from '@/components/ExportButton';
 import { TablePageSkeleton } from '@/components/skeletons';
 import { useTenant } from '@/contexts/TenantContext';
+import { usePagination } from '@/hooks/usePagination';
+import Pagination from '@/components/data/Pagination';
 
 function PresencesAbsences() {
   const [students, setStudents] = useState([]);
@@ -15,6 +17,8 @@ function PresencesAbsences() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('daily'); // 'daily' or 'history'
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
   const { slug } = useTenant();
 
   useEffect(() => {
@@ -90,6 +94,19 @@ function PresencesAbsences() {
     { key: 'time_in', label: 'Entrée', accessor: (s) => getStudentAttendance(s.id)?.time_in || '-' },
     { key: 'time_out', label: 'Sortie', accessor: (s) => getStudentAttendance(s.id)?.time_out || '-' },
   ];
+
+  const filteredHistory = attendanceRecords.filter((r) => {
+    const matchSearch = !searchTerm ||
+      (r.full_name && r.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const date = r.date ? new Date(r.date) : null;
+    const matchMonth = !filterMonth || (date && (date.getMonth() + 1) === parseInt(filterMonth));
+    const matchYear = !filterYear || (date && date.getFullYear() === parseInt(filterYear));
+    return matchSearch && matchMonth && matchYear;
+  });
+
+  const { page: histPage, setPage: setHistPage, totalPages: histTotalPages, paginatedData: paginatedHistory } = usePagination(filteredHistory, 20);
+
+  const availableYears = [...new Set(attendanceRecords.map(r => r.date ? new Date(r.date).getFullYear() : null).filter(Boolean))].sort((a, b) => b - a);
 
   if (loading) {
     return <TablePageSkeleton statsCount={0} columns={5} rows={8} />;
@@ -172,7 +189,7 @@ function PresencesAbsences() {
 
       {/* Search and Filters */}
       <div className="card mb-6">
-        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -185,27 +202,38 @@ function PresencesAbsences() {
               className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all placeholder-gray-400"
             />
             {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             )}
           </div>
+          {viewMode === 'history' && (
+            <>
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-36"
+              >
+                <option value="">Tous les mois</option>
+                {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map((m, i) => (
+                  <option key={i+1} value={i+1}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+                className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-28"
+              >
+                <option value="">Toutes années</option>
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </>
+          )}
           <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('daily')}
-              className={`btn ${viewMode === 'daily' ? 'btn-primary' : 'btn-secondary'}`}
-            >
+            <button onClick={() => setViewMode('daily')} className={`btn ${viewMode === 'daily' ? 'btn-primary' : 'btn-secondary'}`}>
               Vue Journalière
             </button>
-            <button
-              onClick={() => setViewMode('history')}
-              className={`btn ${viewMode === 'history' ? 'btn-primary' : 'btn-secondary'}`}
-            >
+            <button onClick={() => setViewMode('history')} className={`btn ${viewMode === 'history' ? 'btn-primary' : 'btn-secondary'}`}>
               Historique
             </button>
           </div>
@@ -324,55 +352,54 @@ function PresencesAbsences() {
         </div>
       ) : (
         /* History View */
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Étudiant</th>
-                <th>Date</th>
-                <th>Heure d'entrée</th>
-                <th>Heure de sortie</th>
-                <th>Statut</th>
-                <th>Durée</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceRecords.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="text-center py-8 text-gray-500">
-                    Aucun enregistrement de présence aujourd'hui
-                  </td>
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm text-gray-500">{filteredHistory.length} enregistrement{filteredHistory.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="overflow-x-auto -mx-6">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-3">Étudiant</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Date</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Entrée</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Sortie</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Statut</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3">Durée</th>
                 </tr>
-              ) : (
-                attendanceRecords.map((record) => {
-                  const duration = record.time_in && record.time_out
-                    ? calculateDuration(record.time_in, record.time_out)
-                    : '-';
-                  return (
-                    <tr key={record.id}>
-                      <td>
-                        <Link
-                          href={`/${slug}/students/${record.student_id}`}
-                          className="font-medium text-primary-600 hover:text-primary-700"
-                        >
-                          {record.full_name}
-                        </Link>
-                      </td>
-                      <td>{formatDate(record.date)}</td>
-                      <td>{record.time_in || '-'}</td>
-                      <td>{record.time_out || '-'}</td>
-                      <td>
-                        <span className={`badge ${record.status === 'Présent' ? 'badge-success' : 'badge-warning'}`}>
-                          {record.status}
-                        </span>
-                      </td>
-                      <td>{duration}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredHistory.length === 0 ? (
+                  <tr><td colSpan="6" className="text-center py-10 text-gray-400">Aucun enregistrement trouvé</td></tr>
+                ) : (
+                  paginatedHistory.map((record) => {
+                    const duration = record.time_in && record.time_out ? calculateDuration(record.time_in, record.time_out) : '-';
+                    return (
+                      <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-6 py-3.5">
+                          <Link href={`/${slug}/students/${record.student_id}`} className="font-medium text-gray-900 hover:text-primary-600">
+                            {record.full_name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">{formatDate(record.date)}</td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">{record.time_in || '-'}</td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">{record.time_out || '-'}</td>
+                        <td className="px-4 py-3.5">
+                          <span className={`badge ${record.status === 'Présent' ? 'badge-success' : 'badge-warning'}`}>{record.status}</span>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">{duration}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          {histTotalPages > 1 && (
+            <div className="mt-4 px-2">
+              <Pagination currentPage={histPage} totalPages={histTotalPages} onPageChange={setHistPage} totalItems={filteredHistory.length} pageSize={20} />
+            </div>
+          )}
         </div>
       )}
     </div>

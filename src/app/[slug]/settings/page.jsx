@@ -4,16 +4,22 @@ import React, { useState, useEffect } from 'react';
 import api from '@/utils/api';
 import { FormPageSkeleton } from '@/components/skeletons';
 import { useTenant } from '@/contexts/TenantContext';
+import { useToast } from '@/contexts/ToastContext';
 
 function Settings() {
   const [settings, setSettings] = useState({
     school_name: '',
     address: '',
     phone: '',
+    gsm: '',
     email: '',
     default_training_days: 30,
     tax_register: '',
     commercial_register: '',
+    tp: '',
+    cnss: '',
+    ice: '',
+    capital: '',
     city: '',
     fax: '',
     logo: '',
@@ -24,6 +30,7 @@ function Settings() {
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const { slug } = useTenant();
+  const toast = useToast();
 
   useEffect(() => {
     loadSettings();
@@ -37,10 +44,15 @@ function Settings() {
           school_name: data.school_name || '',
           address: data.address || '',
           phone: data.phone || '',
+          gsm: data.gsm || '',
           email: data.email || '',
           default_training_days: data.default_training_days || 30,
           tax_register: data.tax_register || '',
           commercial_register: data.commercial_register || '',
+          tp: data.tp || '',
+          cnss: data.cnss || '',
+          ice: data.ice || '',
+          capital: data.capital || '',
           city: data.city || '',
           fax: data.fax || '',
           logo: data.logo || '',
@@ -81,7 +93,7 @@ function Settings() {
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Erreur lors de l\'enregistrement des paramètres');
+      toast.error('Erreur lors de l\'enregistrement des paramètres');
     } finally {
       setSaving(false);
     }
@@ -110,11 +122,35 @@ function Settings() {
     return <FormPageSkeleton fields={10} />;
   }
 
+  const loginUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/${slug}/login`
+    : `/${slug}/login`;
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
-        <p className="text-gray-500">Configuration de l'application</p>
+        <p className="text-gray-500">Configuration de l'auto-école</p>
+      </div>
+
+      {/* Direct login link */}
+      <div className="card mb-6 bg-blue-50 border border-blue-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-blue-800">Lien de connexion direct</p>
+            <p className="text-xs text-blue-600 mt-0.5 font-mono break-all">{loginUrl}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { navigator.clipboard.writeText(loginUrl); toast.success('Lien copié !'); }}
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 whitespace-nowrap"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copier le lien
+          </button>
+        </div>
       </div>
 
       <div className="max-w-2xl">
@@ -122,67 +158,35 @@ function Settings() {
           {/* School Information */}
           <div className="card mb-6">
             <h2 className="card-header">Informations de l'Auto-École</h2>
-
             <div className="form-group">
               <label className="form-label">Nom de l'Auto-École</label>
-              <input
-                type="text"
-                name="school_name"
-                value={settings.school_name}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="Ex: Auto-École Excellence"
-              />
+              <input type="text" name="school_name" value={settings.school_name} onChange={handleChange} className="form-input" placeholder="Ex: Auto-École Excellence" />
             </div>
-
             <div className="form-group">
               <label className="form-label">Adresse</label>
-              <input
-                type="text"
-                name="address"
-                value={settings.address}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="Ex: 123 Avenue Mohammed V, Casablanca"
-              />
+              <input type="text" name="address" value={settings.address} onChange={handleChange} className="form-input" placeholder="Ex: N°1136 Lot Afaq 02, Saada – Marrakech" />
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">Téléphone</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={settings.phone}
-                  onChange={handleChange}
-                  className="form-input"
-                  placeholder="Ex: 0522-123456"
-                />
+                <label className="form-label">Tél / Fax</label>
+                <input type="tel" name="phone" value={settings.phone} onChange={handleChange} className="form-input" placeholder="Ex: 06 64 54 53 43" />
               </div>
-
+              <div className="form-group">
+                <label className="form-label">GSM</label>
+                <input type="tel" name="gsm" value={settings.gsm || ''} onChange={handleChange} className="form-input" placeholder="Ex: 06 55 80 76 29" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Fax</label>
+                <input type="text" name="fax" value={settings.fax || ''} onChange={handleChange} className="form-input" placeholder="Ex: 05 24 XX XX XX" />
+              </div>
               <div className="form-group">
                 <label className="form-label">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={settings.email}
-                  onChange={handleChange}
-                  className="form-input"
-                  placeholder="Ex: contact@autoecole.ma"
-                />
+                <input type="email" name="email" value={settings.email} onChange={handleChange} className="form-input" placeholder="Ex: contact@autoecole.ma" />
               </div>
             </div>
-
             <div className="form-group">
               <label className="form-label">Ville</label>
-              <input
-                type="text"
-                name="city"
-                value={settings.city}
-                onChange={handleChange}
-                className="form-input"
-                placeholder="Ex: Casablanca"
-              />
+              <input type="text" name="city" value={settings.city} onChange={handleChange} className="form-input" placeholder="Ex: Marrakech" />
             </div>
           </div>
 
@@ -208,7 +212,7 @@ function Settings() {
                 </label>
                 <p className="text-xs text-gray-400 mt-2">PNG, JPG ou SVG. Max 2 Mo.</p>
                 {logoPreview && (
-                  <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); setSettings(prev => ({ ...prev, logo: '' })); }} className="text-xs text-red-500 hover:text-red-700 mt-1">
+                  <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); setSettings(prev => ({ ...prev, logo: '' })); }} className="text-xs text-red-500 hover:text-red-700 mt-1 block">
                     Supprimer le logo
                   </button>
                 )}
@@ -216,46 +220,34 @@ function Settings() {
             </div>
           </div>
 
-          {/* Contract Fields */}
+          {/* Legal Information */}
           <div className="card mb-6">
-            <h2 className="card-header">Informations du Contrat</h2>
-            <p className="text-sm text-gray-500 mb-4">Ces champs apparaissent dans les contrats et formulaires générés</p>
-
+            <h2 className="card-header">Informations Légales</h2>
+            <p className="text-sm text-gray-500 mb-4">Ces informations apparaissent sur les contrats et documents officiels.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-group">
-                <label className="form-label">{'\ا\ل\س\ج\ل \ا\ل\ض\ر\ي\ب\ي'} - Registre fiscal</label>
-                <input
-                  type="text"
-                  name="tax_register"
-                  value={settings.tax_register}
-                  onChange={handleChange}
-                  className="form-input"
-                  placeholder="Ex: 12345678"
-                />
+                <label className="form-label">Capital (SARL)</label>
+                <input type="text" name="capital" value={settings.capital || ''} onChange={handleChange} className="form-input" placeholder="Ex: 10.000,00 Dhs" />
               </div>
-
               <div className="form-group">
-                <label className="form-label">{'\ا\ل\س\ج\ل \ا\ل\ت\ج\ا\ر\ي'} - Registre de commerce</label>
-                <input
-                  type="text"
-                  name="commercial_register"
-                  value={settings.commercial_register}
-                  onChange={handleChange}
-                  className="form-input"
-                  placeholder="Ex: RC-12345"
-                />
+                <label className="form-label">RC (Registre de commerce)</label>
+                <input type="text" name="commercial_register" value={settings.commercial_register} onChange={handleChange} className="form-input" placeholder="Ex: 100775" />
               </div>
-
               <div className="form-group">
-                <label className="form-label">{'\ا\ل\ف\ا\ك\س'} - Fax</label>
-                <input
-                  type="text"
-                  name="fax"
-                  value={settings.fax || ''}
-                  onChange={handleChange}
-                  className="form-input"
-                  placeholder="Ex: 0522-654321"
-                />
+                <label className="form-label">T.P (Taxe professionnelle)</label>
+                <input type="text" name="tp" value={settings.tp || ''} onChange={handleChange} className="form-input" placeholder="Ex: 47940305" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">I.F (Identifiant fiscal)</label>
+                <input type="text" name="tax_register" value={settings.tax_register} onChange={handleChange} className="form-input" placeholder="Ex: 39405279" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">CNSS</label>
+                <input type="text" name="cnss" value={settings.cnss || ''} onChange={handleChange} className="form-input" placeholder="Ex: 1817556" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">ICE</label>
+                <input type="text" name="ice" value={settings.ice || ''} onChange={handleChange} className="form-input" placeholder="Ex: 002347009000081" />
               </div>
             </div>
           </div>
@@ -263,60 +255,29 @@ function Settings() {
           {/* Training Settings */}
           <div className="card mb-6">
             <h2 className="card-header">Paramètres de Formation</h2>
-
             <div className="form-group">
               <label className="form-label">Durée de formation par défaut (jours)</label>
-              <input
-                type="number"
-                name="default_training_days"
-                value={settings.default_training_days || ''}
-                onChange={handleChange}
-                className="form-input"
-                min="1"
-                max="365"
-                placeholder="Ex: 30"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Cette durée sera appliquée par défaut aux nouveaux étudiants
-              </p>
-            </div>
-          </div>
-
-          {/* About Section */}
-          <div className="card mb-6">
-            <h2 className="card-header">À Propos</h2>
-            <div className="space-y-2 text-sm text-gray-600">
-              <p><strong>Application:</strong> Auto-École Maroc</p>
-              <p><strong>Version:</strong> 1.0.0</p>
-              <p><strong>Devise:</strong> MAD (Dirham Marocain)</p>
-              <p><strong>Format de date:</strong> JJ/MM/AAAA</p>
-              <p><strong>Langue:</strong> Français</p>
+              <input type="number" name="default_training_days" value={settings.default_training_days || ''} onChange={handleChange} className="form-input" min="1" max="365" placeholder="Ex: 30" />
+              <p className="text-sm text-gray-500 mt-1">Cette durée sera appliquée par défaut aux nouveaux étudiants</p>
             </div>
           </div>
 
           {/* Save Button */}
           <div className="flex items-center gap-4">
-            <button
-              type="submit"
-              disabled={saving}
-              className="btn btn-primary"
-            >
+            <button type="submit" disabled={saving} className="btn btn-primary">
               {saving ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   Enregistrement...
                 </>
-              ) : (
-                'Enregistrer les paramètres'
-              )}
+              ) : 'Enregistrer les paramètres'}
             </button>
-
             {saved && (
-              <span className="text-green-600 flex items-center">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="text-green-600 flex items-center gap-1">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
                 Paramètres enregistrés

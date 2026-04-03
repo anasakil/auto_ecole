@@ -38,8 +38,8 @@ export default function EditEcolePage() {
   // Ecole + settings form
   const [form, setForm] = useState({
     name: '', slug: '', active: true,
-    school_name: '', address: '', phone: '', email: '', fax: '', city: '',
-    tax_register: '', commercial_register: '', web_reference: '', logo: '',
+    school_name: '', address: '', phone: '', gsm: '', email: '', fax: '', city: '',
+    tax_register: '', commercial_register: '', tp: '', cnss: '', ice: '', capital: '', web_reference: '', logo: '',
   });
   const [formErrors, setFormErrors] = useState({});
   const [logoFile, setLogoFile] = useState(null);
@@ -72,11 +72,16 @@ export default function EditEcolePage() {
         school_name: data.settings?.school_name || data.name || '',
         address: data.settings?.address || '',
         phone: data.settings?.phone || '',
+        gsm: data.settings?.gsm || '',
         email: data.settings?.email || '',
         fax: data.settings?.fax || '',
         city: data.settings?.city || '',
         tax_register: data.settings?.tax_register || '',
         commercial_register: data.settings?.commercial_register || '',
+        tp: data.settings?.tp || '',
+        cnss: data.settings?.cnss || '',
+        ice: data.settings?.ice || '',
+        capital: data.settings?.capital || '',
         web_reference: data.settings?.web_reference || '',
         logo: data.settings?.logo || '',
       });
@@ -157,11 +162,16 @@ export default function EditEcolePage() {
             school_name: form.school_name || form.name,
             address: form.address,
             phone: form.phone,
+            gsm: form.gsm,
             email: form.email,
             fax: form.fax,
             city: form.city,
             tax_register: form.tax_register,
             commercial_register: form.commercial_register,
+            tp: form.tp,
+            cnss: form.cnss,
+            ice: form.ice,
+            capital: form.capital,
             web_reference: form.web_reference,
             logo: logoPath,
           },
@@ -382,10 +392,14 @@ export default function EditEcolePage() {
               <input type="text" value={form.phone} onChange={(e) => handleChange('phone', e.target.value)} className={inputClass('phone')} />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">GSM</label>
+              <input type="text" value={form.gsm} onChange={(e) => handleChange('gsm', e.target.value)} className={inputClass('gsm')} placeholder="Ex: 06 55 80 76 29" />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fax</label>
               <input type="text" value={form.fax} onChange={(e) => handleChange('fax', e.target.value)} className={inputClass('fax')} />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input type="email" value={form.email} onChange={(e) => handleChange('email', e.target.value)} className={inputClass('email')} />
             </div>
@@ -402,12 +416,28 @@ export default function EditEcolePage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Registre fiscal (IF)</label>
-              <input type="text" value={form.tax_register} onChange={(e) => handleChange('tax_register', e.target.value)} className={inputClass('tax_register')} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Capital (SARL)</label>
+              <input type="text" value={form.capital} onChange={(e) => handleChange('capital', e.target.value)} className={inputClass('capital')} placeholder="Ex: 10.000,00 Dhs" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Registre de commerce (RC)</label>
-              <input type="text" value={form.commercial_register} onChange={(e) => handleChange('commercial_register', e.target.value)} className={inputClass('commercial_register')} />
+              <label className="block text-sm font-medium text-gray-700 mb-1">RC (Registre de commerce)</label>
+              <input type="text" value={form.commercial_register} onChange={(e) => handleChange('commercial_register', e.target.value)} className={inputClass('commercial_register')} placeholder="Ex: 100775" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">T.P (Taxe professionnelle)</label>
+              <input type="text" value={form.tp} onChange={(e) => handleChange('tp', e.target.value)} className={inputClass('tp')} placeholder="Ex: 47940305" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">I.F (Identifiant fiscal)</label>
+              <input type="text" value={form.tax_register} onChange={(e) => handleChange('tax_register', e.target.value)} className={inputClass('tax_register')} placeholder="Ex: 39405279" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CNSS</label>
+              <input type="text" value={form.cnss} onChange={(e) => handleChange('cnss', e.target.value)} className={inputClass('cnss')} placeholder="Ex: 1817556" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">ICE</label>
+              <input type="text" value={form.ice} onChange={(e) => handleChange('ice', e.target.value)} className={inputClass('ice')} placeholder="Ex: 002347009000081" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Reference web</label>

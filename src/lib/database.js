@@ -196,6 +196,7 @@ async function initDb() {
       school_name VARCHAR(255) DEFAULT 'Auto-École',
       address TEXT,
       phone VARCHAR(50),
+      gsm VARCHAR(50),
       email VARCHAR(255),
       fax VARCHAR(50),
       city VARCHAR(100),
@@ -203,6 +204,10 @@ async function initDb() {
       license_number VARCHAR(100),
       tax_register VARCHAR(100),
       commercial_register VARCHAR(100),
+      tp VARCHAR(100),
+      cnss VARCHAR(100),
+      ice VARCHAR(100),
+      capital VARCHAR(100),
       web_reference VARCHAR(255),
       logo TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -309,6 +314,16 @@ async function initDb() {
         ALTER TABLE documents ADD COLUMN file_content TEXT;
       END IF;
     END $$
+  `);
+
+  // Migration: add new settings columns if missing
+  await db.query(`
+    ALTER TABLE settings
+      ADD COLUMN IF NOT EXISTS gsm VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS tp VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS cnss VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS ice VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS capital VARCHAR(100)
   `);
 
   // Migration for settings table
@@ -1154,29 +1169,41 @@ async function updateSettings(autoEcoleId, settings) {
   return run(`
     UPDATE settings SET school_name = $1, address = $2, phone = $3, email = $4,
     default_training_days = $5, license_number = $6, tax_register = $7, commercial_register = $8,
-    city = $9, web_reference = $10, fax = $11, logo = $12 WHERE auto_ecole_id = $13
+    city = $9, web_reference = $10, fax = $11, logo = $12,
+    gsm = $13, tp = $14, cnss = $15, ice = $16, capital = $17
+    WHERE auto_ecole_id = $18
   `, [settings.school_name, settings.address || null, settings.phone || null, settings.email || null,
     settings.default_training_days || 30, settings.license_number || null, settings.tax_register || null,
-    settings.commercial_register || null, settings.city || null, settings.web_reference || null, settings.fax || null, settings.logo || null, autoEcoleId]);
+    settings.commercial_register || null, settings.city || null, settings.web_reference || null,
+    settings.fax || null, settings.logo || null,
+    settings.gsm || null, settings.tp || null, settings.cnss || null, settings.ice || null,
+    settings.capital || null, autoEcoleId]);
 }
 
 async function createSettingsForAutoEcole(autoEcoleId, settings = {}) {
-  return run(`INSERT INTO settings (auto_ecole_id, school_name, address, phone, email, fax, city, tax_register, commercial_register, web_reference, logo)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+  return run(`INSERT INTO settings (auto_ecole_id, school_name, address, phone, gsm, email, fax, city, tax_register, commercial_register, tp, cnss, ice, capital, web_reference, logo)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     ON CONFLICT (auto_ecole_id) DO UPDATE SET
       school_name = EXCLUDED.school_name,
       address = EXCLUDED.address,
       phone = EXCLUDED.phone,
+      gsm = EXCLUDED.gsm,
       email = EXCLUDED.email,
       fax = EXCLUDED.fax,
       city = EXCLUDED.city,
       tax_register = EXCLUDED.tax_register,
       commercial_register = EXCLUDED.commercial_register,
+      tp = EXCLUDED.tp,
+      cnss = EXCLUDED.cnss,
+      ice = EXCLUDED.ice,
+      capital = EXCLUDED.capital,
       web_reference = EXCLUDED.web_reference,
       logo = EXCLUDED.logo`,
     [autoEcoleId, settings.school_name || 'Auto-École', settings.address || null, settings.phone || null,
-     settings.email || null, settings.fax || null, settings.city || null, settings.tax_register || null,
-     settings.commercial_register || null, settings.web_reference || null, settings.logo || null]);
+     settings.gsm || null, settings.email || null, settings.fax || null, settings.city || null,
+     settings.tax_register || null, settings.commercial_register || null,
+     settings.tp || null, settings.cnss || null, settings.ice || null, settings.capital || null,
+     settings.web_reference || null, settings.logo || null]);
 }
 
 // ==================== INCIDENTS ====================

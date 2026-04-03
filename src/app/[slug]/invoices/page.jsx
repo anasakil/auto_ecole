@@ -27,6 +27,8 @@ function Invoices() {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterMonth, setFilterMonth] = useState('');
+  const [filterYear, setFilterYear] = useState('');
 
   const [formData, setFormData] = useState({
     student_id: '',
@@ -257,12 +259,16 @@ function Invoices() {
     printWindow.document.close();
   }
 
+  const availableYears = [...new Set(invoices.map(i => i.issue_date ? new Date(i.issue_date).getFullYear() : null).filter(Boolean))].sort((a,b) => b-a);
+
   const filteredInvoices = invoices.filter((inv) => {
     const matchesSearch = inv.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (inv.cin && inv.cin.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = !filterStatus || inv.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchMonth = !filterMonth || (inv.issue_date && new Date(inv.issue_date).getMonth() + 1 === parseInt(filterMonth));
+    const matchYear = !filterYear || (inv.issue_date && new Date(inv.issue_date).getFullYear() === parseInt(filterYear));
+    return matchesSearch && matchesStatus && matchMonth && matchYear;
   });
 
   const { page: invoicesPage, setPage: setInvoicesPage, totalPages: invoicesTotalPages, paginatedData: paginatedInvoices } = usePagination(filteredInvoices, 20);
@@ -356,6 +362,14 @@ function Invoices() {
               </button>
             )}
           </div>
+          <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-36">
+            <option value="">Tous les mois</option>
+            {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-28">
+            <option value="">Toutes années</option>
+            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
           <div className="relative sm:w-52">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
