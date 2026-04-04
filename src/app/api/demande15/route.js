@@ -6,13 +6,7 @@ import fs from 'fs';
 import path from 'path';
 const db = require('@/lib/database');
 const { requireTenant } = require('@/lib/tenant');
-
-function getUploadsDir(subfolder = '') {
-  const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
-  const uploadsDir = path.join(base, subfolder);
-  if (!fs.existsSync(uploadsDir)) { fs.mkdirSync(uploadsDir, { recursive: true }); }
-  return uploadsDir;
-}
+const { uploadToStorage } = require('@/lib/storage');
 
 export async function POST(request) {
   try {
@@ -153,21 +147,20 @@ export async function POST(request) {
 
     const pdfBytes = await flatDoc.save();
     const pdfBuffer = Buffer.from(pdfBytes);
-    const demandesDir = getUploadsDir('demandes');
     const fileName = `demande15-${qrCode}-${Date.now()}.pdf`;
-    const filePath = path.join(demandesDir, fileName);
-    fs.writeFileSync(filePath, pdfBuffer);
 
-    const relativePath = ['uploads', 'demandes', fileName].join('/');
+    // Upload to Supabase Storage
+    const publicUrl = await uploadToStorage(pdfBuffer, 'demandes', fileName, 'application/pdf');
+
     const base64Content = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
     const docRecord = await db.createDocument(tenant.autoEcoleId, {
       student_id: studentId, type: 'Demande 15j', name: `Demande 15j - ${student.full_name}`,
-      file_path: relativePath, file_type: 'pdf', file_size: pdfBytes.length,
+      file_path: publicUrl, file_type: 'pdf', file_size: pdfBytes.length,
       description: `Demande d'avancement 15 jours generee automatiquement le ${dateStr}`,
-      file_content: base64Content
+      file_content: base64Content,
     });
 
-    return NextResponse.json({ success: true, path: relativePath, documentId: docRecord.id });
+    return NextResponse.json({ success: true, path: publicUrl, documentId: docRecord.id });
   } catch (error) {
     console.error('Error generating demande 15j:', error);
     return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });

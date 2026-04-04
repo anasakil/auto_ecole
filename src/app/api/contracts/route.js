@@ -6,15 +6,7 @@ import fs from 'fs';
 import path from 'path';
 const db = require('@/lib/database');
 const { requireTenant } = require('@/lib/tenant');
-
-function getUploadsDir(subfolder = '') {
-  const base = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
-  const uploadsDir = path.join(base, subfolder);
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-  return uploadsDir;
-}
+const { uploadToStorage } = require('@/lib/storage');
 
 function drawTextRTL(page, text, rightX, y, font, size) {
   if (!text) return;
@@ -113,10 +105,6 @@ export async function POST(request) {
     drawTextCenter(page, cityName || '', 398, 157, font, 9);
     drawTextCenter(page, regDate, 202, 157, font, 9);
 
-    const contractsDir = getUploadsDir('contracts');
-    const fileName = `contrat-${student.qr_code}-${Date.now()}.pdf`;
-    const filePath = path.join(contractsDir, fileName);
-
     const filledBytes = await pdfDoc.save();
     const filledPdf = await PDFDocument.load(filledBytes);
     const flatDoc = await PDFDocument.create();
@@ -126,22 +114,24 @@ export async function POST(request) {
 
     const pdfBytes = await flatDoc.save();
     const pdfBuffer = Buffer.from(pdfBytes);
-    fs.writeFileSync(filePath, pdfBuffer);
+    const fileName = `contrat-${student.qr_code}-${Date.now()}.pdf`;
 
-    const relativePath = ['uploads', 'contracts', fileName].join('/');
+    // Upload to Supabase Storage
+    const publicUrl = await uploadToStorage(pdfBuffer, 'contracts', fileName, 'application/pdf');
+
     const base64Content = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
     const docRecord = await db.createDocument(tenant.autoEcoleId, {
       student_id: studentId,
       type: 'Contrat',
       name: `Contrat - ${student.full_name}`,
-      file_path: relativePath,
+      file_path: publicUrl,
       file_type: 'pdf',
       file_size: pdfBytes.length,
       description: `Contrat de formation généré automatiquement le ${dateStr}`,
-      file_content: base64Content
+      file_content: base64Content,
     });
 
-    return NextResponse.json({ success: true, path: relativePath, documentId: docRecord.id });
+    return NextResponse.json({ success: true, path: publicUrl, documentId: docRecord.id });
   } catch (error) {
     console.error('Error generating contract:', error);
     return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });

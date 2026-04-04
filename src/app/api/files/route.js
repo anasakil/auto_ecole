@@ -1,10 +1,9 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { writeFile, readFile, unlink, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
 import path from 'path';
 const { requireAuth } = require('@/lib/tenant');
 const db = require('@/lib/database');
+const { uploadToStorage, deleteFromStorage, isStorageUrl } = require('@/lib/storage');
 
 const ALLOWED_SUBFOLDERS = new Set(['documents', 'profiles', 'contracts', 'photos', 'logos']);
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf'];
@@ -16,8 +15,8 @@ const MIME_MAP = {
   '.svg': 'image/svg+xml',
 };
 
-function toBase64(filePathOrExt, buffer) {
-  const ext = path.extname(filePathOrExt).toLowerCase();
+function toBase64(fileName, buffer) {
+  const ext = path.extname(fileName).toLowerCase();
   const mime = MIME_MAP[ext] || 'application/octet-stream';
   return `data:${mime};base64,${buffer.toString('base64')}`;
 }
@@ -29,38 +28,6 @@ function getExt(filename) {
 function generateFileName(originalName) {
   const ext = path.extname(originalName).toLowerCase().replace(/[^.a-z0-9]/g, '');
   return `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-}
-
-// On Vercel files go to /tmp; locally to uploads/
-function getUploadDir(subfolder) {
-  const safe = subfolder.replace(/[^a-zA-Z0-9_-]/g, '');
-  if (process.env.VERCEL) return path.join('/tmp', safe);
-  return path.resolve(process.cwd(), 'uploads', safe);
-}
-
-// Validate that a relative path like "uploads/profiles/xxx.jpg" is safe
-function isSafePath(rawPath) {
-  if (!rawPath || typeof rawPath !== 'string') return false;
-  if (rawPath.includes('\0') || rawPath.includes('..')) return false;
-  const normalized = rawPath.replace(/\\/g, '/');
-  return (
-    normalized.startsWith('uploads/') ||
-    normalized.startsWith('/tmp/') ||
-    normalized.startsWith('tmp/')
-  );
-}
-
-// Resolve a stored relative path like "uploads/profiles/xxx.jpg" to an absolute path
-// On Vercel: uploads/profiles/xxx  →  /tmp/profiles/xxx
-// Locally:   uploads/profiles/xxx  →  <cwd>/uploads/profiles/xxx
-function resolveStoredPath(rawPath) {
-  const normalized = rawPath.replace(/\\/g, '/');
-  if (process.env.VERCEL) {
-    // Map uploads/xxx → /tmp/xxx
-    const withoutPrefix = normalized.replace(/^uploads\//, '');
-    return path.join('/tmp', withoutPrefix);
-  }
-  return path.resolve(process.cwd(), normalized);
 }
 
 export async function POST(request) {
@@ -78,37 +45,32 @@ export async function POST(request) {
     if (file.size > MAX_FILE_SIZE) return NextResponse.json({ success: false, error: 'Fichier trop volumineux (max 5 Mo)' }, { status: 400 });
 
     const fileName = generateFileName(file.name);
-    const uploadDir = getUploadDir(subfolder);
-    await mkdir(uploadDir, { recursive: true });
-    const absolutePath = path.join(uploadDir, fileName);
-
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(absolutePath, buffer);
 
-    // Always use uploads/subfolder/filename as the stored path (canonical)
-    const relativePath = `uploads/${subfolder}/${fileName}`;
+    // Upload to Supabase Storage — permanent, works on Vercel
+    const publicUrl = await uploadToStorage(buffer, subfolder, fileName, file.type);
 
-    // Persist base64 in DB — this is the source of truth on Vercel
-    const base64Content = toBase64(absolutePath, buffer);
+    // Also build base64 for instant client preview
+    const base64Content = toBase64(file.name, buffer);
     const autoEcoleId = auth.autoEcoleId || null;
+
+    // Save record to DB (file_path = public URL, file_content = base64 for offline fallback)
     try {
       await db.createDocument(autoEcoleId, {
         student_id: null,
         type: file.type.startsWith('image/') ? 'Image' : 'PDF',
         name: file.name,
-        file_path: relativePath,
+        file_path: publicUrl,
         file_type: getExt(file.name),
         file_size: file.size,
         file_content: base64Content,
       });
     } catch (dbErr) {
       console.error('[files POST] DB persist error:', dbErr);
-      // Still return success — file is on disk for local dev
     }
 
-    // Return base64 directly so client can display immediately without a second request
-    return NextResponse.json({ success: true, filePath: relativePath, fileName, base64: base64Content });
+    return NextResponse.json({ success: true, filePath: publicUrl, fileName, base64: base64Content });
   } catch (error) {
     console.error('[files POST]', error);
     return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
@@ -124,51 +86,49 @@ export async function GET(request) {
     const rawPath = searchParams.get('path');
 
     if (!rawPath) return NextResponse.json({ success: false, error: 'Chemin manquant' }, { status: 400 });
-    if (!isSafePath(rawPath)) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
 
+    // If it's already a public Supabase URL, fetch it directly and return as base64
+    if (isStorageUrl(rawPath) || rawPath.startsWith('http')) {
+      try {
+        const res = await fetch(rawPath);
+        if (res.ok) {
+          const arrayBuf = await res.arrayBuffer();
+          const buf = Buffer.from(arrayBuf);
+          const contentType = res.headers.get('content-type') || 'application/octet-stream';
+          const ext = rawPath.split('.').pop().toLowerCase();
+          const mime = MIME_MAP[`.${ext}`] || contentType;
+          const data = `data:${mime};base64,${buf.toString('base64')}`;
+          return NextResponse.json({ data });
+        }
+      } catch (fetchErr) {
+        console.error('[files GET] fetch URL error:', fetchErr);
+      }
+      return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
+    }
+
+    // Legacy path (uploads/xxx) — try DB first
     const normalized = rawPath.replace(/\\/g, '/');
-
-    // 1. Try DB — try both slash variants and with/without tenant
     try {
       const pathVariants = [normalized, normalized.replace(/\//g, '\\')];
       for (const p of pathVariants) {
         let doc = auth.autoEcoleId ? await db.getDocumentByPath(p, auth.autoEcoleId) : null;
         if (!doc) doc = await db.getDocumentByPath(p, null);
         if (doc?.file_content) return NextResponse.json({ data: doc.file_content });
+        // If DB has a public URL stored, redirect to that
+        if (doc?.file_path && isStorageUrl(doc.file_path)) {
+          const res = await fetch(doc.file_path);
+          if (res.ok) {
+            const arrayBuf = await res.arrayBuffer();
+            const buf = Buffer.from(arrayBuf);
+            const ext = doc.file_path.split('.').pop().toLowerCase();
+            const mime = MIME_MAP[`.${ext}`] || 'application/octet-stream';
+            const data = `data:${mime};base64,${buf.toString('base64')}`;
+            return NextResponse.json({ data });
+          }
+        }
       }
     } catch (dbErr) {
       console.error('[files GET] DB error:', dbErr);
-    }
-
-    // 2. Try filesystem — resolve canonical path (handles Vercel /tmp mapping)
-    const fsPaths = [
-      resolveStoredPath(normalized),
-      // Also try the raw path relative to cwd (local dev fallback)
-      path.resolve(process.cwd(), normalized),
-    ];
-
-    for (const candidate of fsPaths) {
-      try {
-        if (existsSync(candidate)) {
-          const buf = await readFile(candidate);
-          const data = toBase64(candidate, buf);
-
-          // Back-fill DB so next request is instant
-          try {
-            await db.createDocument(auth.autoEcoleId || null, {
-              student_id: null,
-              type: buf ? 'Image' : 'PDF',
-              name: path.basename(candidate),
-              file_path: normalized,
-              file_type: getExt(candidate),
-              file_size: buf.length,
-              file_content: data,
-            });
-          } catch {}
-
-          return NextResponse.json({ data });
-        }
-      } catch {}
     }
 
     return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
@@ -185,16 +145,13 @@ export async function DELETE(request) {
 
     const { searchParams } = new URL(request.url);
     const rawPath = searchParams.get('path');
+    if (!rawPath) return NextResponse.json({ success: false, error: 'Chemin manquant' }, { status: 400 });
 
-    if (!rawPath || !isSafePath(rawPath)) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
-
-    const fsPaths = [
-      resolveStoredPath(rawPath.replace(/\\/g, '/')),
-      path.resolve(process.cwd(), rawPath.replace(/\\/g, '/')),
-    ];
-
-    for (const p of fsPaths) {
-      try { if (existsSync(p)) await unlink(p); } catch {}
+    // Delete from Supabase Storage (works for both full URLs and storage paths)
+    try {
+      await deleteFromStorage(rawPath);
+    } catch (e) {
+      console.error('[files DELETE] storage error:', e);
     }
 
     return NextResponse.json({ success: true });

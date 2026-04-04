@@ -125,7 +125,22 @@ const api = {
       }
       return fetch('/api/files', options).then(r => r.json());
     },
-    getBase64: (filePath) => tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`).then(r => r?.data || null).catch(() => null),
+    getBase64: async (filePath) => {
+      if (!filePath) return null;
+      // Supabase public URL — fetch directly, no server round-trip needed
+      if (filePath.startsWith('http')) {
+        try {
+          const res = await fetch(filePath);
+          if (!res.ok) return null;
+          const buf = await res.arrayBuffer();
+          const mime = res.headers.get('content-type') || 'application/octet-stream';
+          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          return `data:${mime};base64,${b64}`;
+        } catch { return null; }
+      }
+      // Legacy path — go through /api/files
+      return tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`).then(r => r?.data || null).catch(() => null);
+    },
     deleteFile: (filePath) => tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' }),
   },
 

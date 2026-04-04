@@ -1272,7 +1272,7 @@ async function getAdminByUsername(username) {
 }
 
 module.exports = {
-  getDb, initDb, withTransaction, getAdminByUsername,
+  getDb, initDb, query, withTransaction, getAdminByUsername,
   // Auto-ecoles
   getAllAutoEcoles, getAutoEcoleById, getAutoEcoleBySlug, createAutoEcole, updateAutoEcole, deleteAutoEcole,
   getAdminsByAutoEcole, createTenantAdmin, updateTenantAdminPassword, deleteTenantAdmin,
