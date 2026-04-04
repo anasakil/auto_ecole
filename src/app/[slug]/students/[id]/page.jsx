@@ -340,8 +340,14 @@ function StudentDetail() {
       setUploadingProfile(true);
       const uploadResult = await api.files.upload(file, 'profiles');
       if (uploadResult.filePath) {
+        // Clear old cached image so next load fetches fresh
+        if (student.profile_image) api.files.clearCache(student.profile_image);
         await api.students.updateImage(student.id, 'profile_image', uploadResult.filePath);
-        if (uploadResult.base64) setProfileImageData(uploadResult.base64);
+        // Cache the new image immediately
+        if (uploadResult.base64) {
+          api.files.clearCache(uploadResult.filePath);
+          setProfileImageData(uploadResult.base64);
+        }
       } else {
         alert(uploadResult.error || 'Erreur lors du téléchargement');
       }

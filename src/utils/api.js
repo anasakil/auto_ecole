@@ -1,6 +1,10 @@
 // Global tenant slug - set by TenantContext when navigating tenant pages
 let currentTenantSlug = null;
 
+// In-memory image/file cache: filePath → base64/url string
+// Persists for the lifetime of the browser tab, preventing redundant fetches
+const _fileCache = new Map();
+
 export function setTenantSlug(slug) {
   currentTenantSlug = slug;
 }
@@ -127,13 +131,20 @@ const api = {
     },
     getBase64: async (filePath) => {
       if (!filePath) return null;
+      if (_fileCache.has(filePath)) return _fileCache.get(filePath);
       // Supabase public URL — return as-is for <img src> and <iframe src>
-      // No need to convert to base64; direct URL works everywhere
       if (filePath.startsWith('http')) {
+        _fileCache.set(filePath, filePath);
         return filePath;
       }
       // Legacy path — go through /api/files
-      return tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`).then(r => r?.data || null).catch(() => null);
+      const result = await tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`).then(r => r?.data || null).catch(() => null);
+      if (result) _fileCache.set(filePath, result);
+      return result;
+    },
+    clearCache: (filePath) => {
+      if (filePath) _fileCache.delete(filePath);
+      else _fileCache.clear();
     },
     deleteFile: (filePath) => tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' }),
   },

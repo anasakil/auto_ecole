@@ -282,96 +282,135 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
       )}
 
       {activeTab === 'documents' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-gray-50 rounded-xl p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-4">Photo de Profil</label>
-            <div onClick={() => !profileImagePreview && profileInputRef.current?.click()} className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${profileImagePreview ? 'border-primary-400 bg-primary-50' : 'border-gray-300 hover:border-primary-400 hover:bg-white'}`}>
-              {profileImagePreview ? (
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <img src={profileImagePreview} alt="Preview" className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg" />
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-gray-900 truncate">{profileImage?.name}</p>
-                    <p className="text-sm text-gray-500">{(profileImage?.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setProfileImage(null); setProfileImagePreview(null); }} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+        <div className="space-y-4">
+          {/* Photo + CIN side by side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Photo de Profil */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md bg-primary-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </div>
-              ) : (
-                <div className="py-6">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                  </div>
-                  <p className="text-gray-600 font-medium">Cliquez pour ajouter une photo</p>
-                  <p className="text-sm text-gray-400 mt-1">JPG, PNG jusqu&apos;à 5MB</p>
-                </div>
-              )}
-              <input ref={profileInputRef} type="file" accept="image/*" onChange={(e) => handleFileSelect(e.target.files, 'profile')} className="hidden" />
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-xl p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-4">Copie CIN</label>
-            <div onClick={() => !cinDocumentPreview && cinInputRef.current?.click()} className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${cinDocumentPreview ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-white'}`}>
-              {cinDocumentPreview ? (
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  {cinDocumentPreview === 'pdf' ? (
-                    <div className="w-16 h-20 bg-red-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                    </div>
-                  ) : (
-                    <img src={cinDocumentPreview} alt="CIN" className="w-24 h-16 object-cover rounded-lg border shadow" />
-                  )}
-                  <div className="flex-1 text-left">
-                    <p className="font-medium text-gray-900 truncate">{cinDocument?.name}</p>
-                    <p className="text-sm text-gray-500">{(cinDocument?.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); setCinDocument(null); setCinDocumentPreview(null); }} className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
-                </div>
-              ) : (
-                <div className="py-6">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" /></svg>
-                  </div>
-                  <p className="text-gray-600 font-medium">Cliquez pour ajouter la CIN</p>
-                  <p className="text-sm text-gray-400 mt-1">Image ou PDF</p>
-                </div>
-              )}
-              <input ref={cinInputRef} type="file" accept="image/*,.pdf" onChange={(e) => handleFileSelect(e.target.files, 'cin')} className="hidden" />
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 bg-gray-50 rounded-xl p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-4">Documents Supplémentaires</label>
-            <div onClick={() => docsInputRef.current?.click()} className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer transition-all hover:border-green-400 hover:bg-white">
-              <div className="py-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                </div>
-                <p className="text-gray-600 font-medium">Cliquez pour ajouter des documents</p>
-                <p className="text-sm text-gray-400 mt-1">Certificats, attestations...</p>
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Photo de Profil</span>
               </div>
-              <input ref={docsInputRef} type="file" multiple accept="image/*,.pdf,.doc,.docx" onChange={(e) => handleFileSelect(e.target.files, 'docs')} className="hidden" />
+              {profileImagePreview ? (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <img src={profileImagePreview} alt="Preview" className="w-10 h-10 rounded-full object-cover border-2 border-primary-200 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-800 truncate">{profileImage?.name}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{(profileImage?.size / 1024).toFixed(0)} KB</p>
+                  </div>
+                  <button type="button" onClick={() => { setProfileImage(null); setProfileImagePreview(null); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                  <label className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    <input type="file" accept="image/*" onChange={(e) => handleFileSelect(e.target.files, 'profile')} className="hidden" />
+                  </label>
+                </div>
+              ) : (
+                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-primary-50 border-2 border-dashed border-primary-200 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-600">Ajouter une photo</p>
+                    <p className="text-[11px] text-gray-400">JPG, PNG · max 5 Mo</p>
+                  </div>
+                  <input ref={profileInputRef} type="file" accept="image/*" onChange={(e) => handleFileSelect(e.target.files, 'profile')} className="hidden" />
+                </label>
+              )}
             </div>
-            {additionalDocs.length > 0 && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+            {/* Copie CIN */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" /></svg>
+                </div>
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Copie CIN</span>
+              </div>
+              {cinDocumentPreview ? (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${cinDocumentPreview === 'pdf' ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200'}`}>
+                    {cinDocumentPreview === 'pdf' ? (
+                      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    ) : (
+                      <img src={cinDocumentPreview} alt="CIN" className="w-full h-full object-cover rounded-lg" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-gray-800 truncate">{cinDocument?.name}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{(cinDocument?.size / 1024).toFixed(0)} KB</p>
+                  </div>
+                  <button type="button" onClick={() => { setCinDocument(null); setCinDocumentPreview(null); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                  <label className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer flex-shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    <input type="file" accept="image/*,.pdf" onChange={(e) => handleFileSelect(e.target.files, 'cin')} className="hidden" />
+                  </label>
+                </div>
+              ) : (
+                <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 border-2 border-dashed border-blue-200 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-600">Ajouter la CIN</p>
+                    <p className="text-[11px] text-gray-400">Image ou PDF</p>
+                  </div>
+                  <input ref={cinInputRef} type="file" accept="image/*,.pdf" onChange={(e) => handleFileSelect(e.target.files, 'cin')} className="hidden" />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Documents Supplémentaires */}
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Documents Supplémentaires</span>
+                {additionalDocs.length > 0 && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full">{additionalDocs.length}</span>
+                )}
+              </div>
+              <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer border border-green-200">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Ajouter
+                <input ref={docsInputRef} type="file" multiple accept="image/*,.pdf,.doc,.docx" onChange={(e) => handleFileSelect(e.target.files, 'docs')} className="hidden" />
+              </label>
+            </div>
+
+            {additionalDocs.length === 0 ? (
+              <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-green-50 border-2 border-dashed border-green-200 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                </div>
+                <p className="text-xs text-gray-400">Certificats, attestations, photos…</p>
+                <input type="file" multiple accept="image/*,.pdf,.doc,.docx" onChange={(e) => handleFileSelect(e.target.files, 'docs')} className="hidden" />
+              </label>
+            ) : (
+              <div className="divide-y divide-gray-100">
                 {additionalDocs.map((doc, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${doc.type === 'image' ? 'bg-green-100' : 'bg-blue-100'}`}>
-                        <svg className={`w-5 h-5 ${doc.type === 'image' ? 'text-green-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          {doc.type === 'image' ? (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />)}
-                        </svg>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm text-gray-900 truncate">{doc.name}</p>
-                        <p className="text-xs text-gray-500">{(doc.file.size / 1024).toFixed(1)} KB</p>
-                      </div>
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${doc.type === 'image' ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+                      <svg className={`w-4 h-4 ${doc.type === 'image' ? 'text-green-500' : 'text-blue-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {doc.type === 'image'
+                          ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        }
+                      </svg>
                     </div>
-                    <button type="button" onClick={() => setAdditionalDocs((prev) => prev.filter((_, idx) => idx !== i))} className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-colors flex-shrink-0">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">{doc.name}</p>
+                      <p className="text-[11px] text-gray-400">{(doc.file.size / 1024).toFixed(0)} KB</p>
+                    </div>
+                    <button type="button" onClick={() => setAdditionalDocs((prev) => prev.filter((_, idx) => idx !== i))} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
                 ))}

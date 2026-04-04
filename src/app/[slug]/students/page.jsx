@@ -131,13 +131,18 @@ function Students() {
       }
 
       // Handle file uploads if any
+      let newProfileImageData = null;
       if (_files && studentId) {
         // Upload profile image
         if (_files.profileImage) {
           try {
             const uploadResult = await api.files.upload(_files.profileImage, 'profiles');
             if (uploadResult.filePath) {
+              // Clear old cached image if editing
+              if (editingStudent?.profile_image) api.files.clearCache(editingStudent.profile_image);
               await api.students.updateImage(studentId, 'profile_image', uploadResult.filePath);
+              // Use base64 for instant display, cache it
+              newProfileImageData = uploadResult.base64 || uploadResult.filePath;
             }
           } catch (err) {
             console.error('Error uploading profile image:', err);
@@ -183,7 +188,29 @@ function Students() {
       }
 
       setShowModal(false);
-      loadStudents();
+
+      // Optimistic update: immediately reflect changes in the list without full reload flash
+      if (editingStudent) {
+        setStudents(prev => prev.map(s => s.id === studentId ? { ...s, ...data } : s));
+        if (newProfileImageData) {
+          setStudentImages(prev => ({ ...prev, [studentId]: newProfileImageData }));
+        }
+      } else {
+        // New student: fetch just this student and prepend to list
+        try {
+          const newStudent = await api.students.getById(studentId);
+          if (newStudent) {
+            setStudents(prev => [newStudent, ...prev]);
+            if (newProfileImageData) {
+              setStudentImages(prev => ({ ...prev, [studentId]: newProfileImageData }));
+            }
+          } else {
+            loadStudents();
+          }
+        } catch {
+          loadStudents();
+        }
+      }
     } catch (error) {
       console.error('Error saving student:', error);
       const errorMessage = error.message || 'Erreur lors de l\'enregistrement';

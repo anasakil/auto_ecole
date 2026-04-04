@@ -101,21 +101,25 @@ function Invoices() {
   }
 
   async function handleStatusChange(id, newStatus) {
+    // Optimistic update — instant UI response
+    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status: newStatus } : inv));
     try {
       await api.invoices.updateStatus(id, newStatus);
-      loadData();
     } catch (error) {
       console.error('Error updating status:', error);
+      loadData(); // revert on error
     }
   }
 
   async function handleDelete(id) {
     if (window.confirm('Supprimer cette facture ?')) {
+      // Optimistic remove
+      setInvoices(prev => prev.filter(inv => inv.id !== id));
       try {
         await api.invoices.delete(id);
-        loadData();
       } catch (error) {
         console.error('Error deleting invoice:', error);
+        loadData(); // revert on error
       }
     }
   }

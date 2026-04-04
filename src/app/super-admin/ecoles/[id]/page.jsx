@@ -147,7 +147,7 @@ export default function EditEcolePage() {
         const uploadRes = await fetch('/api/files', { method: 'POST', body: formData });
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
-          logoPath = uploadData.path;
+          logoPath = uploadData.filePath;
         }
       }
 
@@ -181,8 +181,9 @@ export default function EditEcolePage() {
         const data = await res.json();
         throw new Error(data.error || 'Erreur lors de la mise a jour');
       }
-      toast.success('Auto-ecole mise a jour avec succes');
+      toast.success('Auto-école mise à jour avec succès');
       setLogoFile(null);
+      if (logoPath) handleChange('logo', logoPath);
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -338,39 +339,63 @@ export default function EditEcolePage() {
 
         {/* Logo */}
         <div className="bg-white rounded-2xl shadow-soft p-6">
-          <h2 className="text-base font-semibold text-dark mb-4 flex items-center gap-2">
+          <h2 className="text-base font-semibold text-dark mb-5 flex items-center gap-2">
             <svg className="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Logo
+            Logo de l&apos;école
           </h2>
-          <div className="flex items-center gap-6">
-            <div className="flex-shrink-0">
+          <div className="flex flex-col items-center gap-4">
+            {/* Preview zone */}
+            <div className={`w-32 h-32 rounded-2xl flex items-center justify-center overflow-hidden transition-all ${logoPreview ? 'bg-gray-50 border-2 border-primary-200 shadow-lg' : 'bg-gray-100 border-2 border-dashed border-gray-300'}`}>
               {logoPreview ? (
-                <img src={logoPreview} alt="Logo" className="w-20 h-20 rounded-xl object-contain shadow-soft bg-gray-50 p-1" />
+                <img src={logoPreview} alt="Logo" className="w-full h-full object-contain p-2" />
               ) : (
-                <div className="w-20 h-20 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <div className="flex flex-col items-center gap-2 text-gray-400">
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
+                  <span className="text-xs">Aucun logo</span>
                 </div>
               )}
             </div>
-            <div>
-              <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-500 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors cursor-pointer border border-primary-200">
+            {/* Sidebar preview hint */}
+            {logoPreview && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 rounded-xl border border-purple-100 w-full">
+                <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #6C5CE7, #4834D4)' }}>
+                  <div className="w-full h-full flex items-center justify-center p-0.5">
+                    <img src={logoPreview} alt="Logo" className="w-full h-full object-contain rounded-lg bg-white" />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-purple-700 truncate">{form.school_name || form.name || 'Auto-École'}</p>
+                  <p className="text-[10px] text-purple-400">Aperçu dans la barre latérale</p>
+                </div>
+              </div>
+            )}
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <label className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary-600 bg-primary-50 rounded-xl hover:bg-primary-100 active:scale-95 transition-all cursor-pointer border border-primary-200">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
-                {logoPreview ? 'Changer le logo' : 'Choisir un logo'}
+                {logoPreview ? 'Changer' : 'Choisir un logo'}
                 <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
               </label>
-              <p className="text-xs text-gray-400 mt-2">PNG, JPG ou SVG. Max 2 Mo.</p>
               {logoPreview && (
-                <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); handleChange('logo', ''); }} className="text-xs text-red-500 hover:text-red-700 mt-1">
-                  Supprimer le logo
+                <button
+                  type="button"
+                  onClick={() => { setLogoFile(null); setLogoPreview(null); handleChange('logo', ''); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-all border border-red-200"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Supprimer
                 </button>
               )}
             </div>
+            <p className="text-xs text-gray-400">PNG, JPG ou SVG · Max 2 Mo</p>
           </div>
         </div>
 
