@@ -43,7 +43,9 @@ function StudentDetail() {
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [showDocumentViewer, setShowDocumentViewer] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [uploadingCin, setUploadingCin] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [qrCodeGenerated, setQrCodeGenerated] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [studentTimeStats, setStudentTimeStats] = useState(null);
@@ -96,24 +98,27 @@ function StudentDetail() {
   }, [id]);
 
   useEffect(() => {
-    const generateQR = async () => {
-      if (student && student.qr_code && qrCanvasRef.current) {
+    if (!student?.qr_code) return;
+    let cancelled = false;
+    const attempt = async (retries = 5) => {
+      if (cancelled) return;
+      if (qrCanvasRef.current) {
         try {
           await QRCode.toCanvas(qrCanvasRef.current, student.qr_code, {
             width: 200,
             margin: 2,
             color: { dark: '#1e40af', light: '#ffffff' },
           });
-          setQrCodeGenerated(true);
+          if (!cancelled) setQrCodeGenerated(true);
         } catch (err) {
           console.error('QR Code generation error:', err);
         }
+      } else if (retries > 0) {
+        setTimeout(() => attempt(retries - 1), 100);
       }
     };
-
-    // Small delay to ensure canvas is mounted
-    const timer = setTimeout(generateQR, 100);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => attempt(), 50);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [student?.qr_code]);
 
   async function loadStudent() {
@@ -147,17 +152,19 @@ function StudentDetail() {
 
         // Load profile image if exists
         if (data.profile_image) {
-          try {
-            const imgData = await api.files.getBase64(data.profile_image);
+          api.files.getBase64(data.profile_image).then(imgData => {
             if (imgData) setProfileImageData(imgData);
-          } catch {}
+          });
+        } else {
+          setProfileImageData(null);
         }
         // Load CIN document if exists
         if (data.cin_document) {
-          try {
-            const cinData = await api.files.getBase64(data.cin_document);
+          api.files.getBase64(data.cin_document).then(cinData => {
             if (cinData) setCinDocumentData(cinData);
-          } catch {}
+          });
+        } else {
+          setCinDocumentData(null);
         }
       } else {
         router.push(`/${slug}/students`);
@@ -328,24 +335,24 @@ function StudentDetail() {
   async function handleProfileFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Show instant local preview
+    // Instant local preview
     const reader = new FileReader();
     reader.onload = (ev) => setProfileImageData(ev.target.result);
     reader.readAsDataURL(file);
     try {
-      setUploadingImage(true);
+      setUploadingProfile(true);
       const uploadResult = await api.files.upload(file, 'profiles');
       if (uploadResult.filePath) {
         await api.students.updateImage(student.id, 'profile_image', uploadResult.filePath);
         if (uploadResult.base64) setProfileImageData(uploadResult.base64);
       } else {
-        alert(uploadResult.error || 'Erreur lors du téléchargement de l\'image');
+        alert(uploadResult.error || 'Erreur lors du téléchargement');
       }
-    } catch (error) {
-      console.error('Error uploading image:', error);
+    } catch (err) {
+      console.error('Error uploading profile:', err);
       alert('Erreur lors du téléchargement');
     } finally {
-      setUploadingImage(false);
+      setUploadingProfile(false);
       e.target.value = '';
     }
   }
@@ -366,7 +373,7 @@ function StudentDetail() {
       setCinDocumentData('data:application/pdf;base64,placeholder');
     }
     try {
-      setUploadingImage(true);
+      setUploadingCin(true);
       const uploadResult = await api.files.upload(file, 'documents');
       if (uploadResult.filePath) {
         await api.students.updateImage(student.id, 'cin_document', uploadResult.filePath);
@@ -380,7 +387,7 @@ function StudentDetail() {
       alert('Erreur lors du téléchargement');
       setCinDocumentData(null);
     } finally {
-      setUploadingImage(false);
+      setUploadingCin(false);
       e.target.value = '';
     }
   }
@@ -394,6 +401,7 @@ function StudentDetail() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      setUploadingDoc(true);
       const uploadResult = await api.files.upload(file, 'documents');
       if (uploadResult.filePath) {
         const fileExt = file.name.split('.').pop().toLowerCase();
@@ -427,6 +435,7 @@ function StudentDetail() {
       console.error('Error uploading document:', error);
       alert('Erreur lors du téléchargement');
     } finally {
+      setUploadingDoc(false);
       e.target.value = '';
     }
   }
@@ -1331,10 +1340,10 @@ function StudentDetail() {
             <div className="flex gap-2">
               <button
                 onClick={handleUploadProfileImage}
-                disabled={uploadingImage}
+                disabled={uploadingProfile}
                 className="btn btn-secondary btn-sm flex-1"
               >
-                {uploadingImage ? 'Chargement...' : profileImageData ? 'Changer' : 'Ajouter photo'}
+                {uploadingProfile ? 'Chargement...' : profileImageData ? 'Changer' : 'Ajouter photo'}
               </button>
               {profileImageData && (
                 <button
@@ -1399,10 +1408,10 @@ function StudentDetail() {
             <div className="flex gap-2">
               <button
                 onClick={handleUploadCinDocument}
-                disabled={uploadingImage}
+                disabled={uploadingCin}
                 className="btn btn-secondary btn-sm flex-1"
               >
-                {uploadingImage ? 'Chargement...' : cinDocumentData ? 'Remplacer' : 'Ajouter CIN'}
+                {uploadingCin ? 'Chargement...' : cinDocumentData ? 'Remplacer' : 'Ajouter CIN'}
               </button>
               {cinDocumentData && cinDocumentData.startsWith('data:image') && (
                 <button
@@ -1594,8 +1603,8 @@ function StudentDetail() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="card-header mb-0">Documents</h2>
               <div className="flex gap-2">
-                <button onClick={handleUploadDocument} className="btn btn-secondary btn-sm">
-                  + Ajouter
+                <button onClick={handleUploadDocument} disabled={uploadingDoc} className="btn btn-secondary btn-sm">
+                  {uploadingDoc ? 'Chargement...' : '+ Ajouter'}
                 </button>
               </div>
             </div>
