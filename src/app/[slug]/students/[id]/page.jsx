@@ -1372,28 +1372,38 @@ function StudentDetail() {
                     onClick={() => window.open(cinDocumentData, '_blank')}
                   />
                 ) : (
-                  <div
-                    className="p-4 bg-gray-50 rounded-lg text-center border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => {
-                      try {
-                        const [header, b64] = cinDocumentData.split(',');
-                        const mime = header.match(/:(.*?);/)[1];
-                        const binary = atob(b64);
-                        const bytes = new Uint8Array(binary.length);
-                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                        const blob = new Blob([bytes], { type: mime });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                      } catch {}
-                    }}
-                  >
-                    <svg className="w-10 h-10 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    <p className="text-sm font-medium text-gray-700">Document PDF</p>
-                    <p className="text-xs text-gray-400 mt-1">Cliquer pour ouvrir</p>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <iframe
+                      src={cinDocumentData}
+                      className="w-full"
+                      style={{ height: '300px', border: 'none' }}
+                      title="CIN PDF"
+                    />
+                    <div className="flex gap-2 p-2 bg-gray-50 border-t border-gray-200">
+                      <button
+                        onClick={() => {
+                          const win = window.open('', '_blank');
+                          win.document.write(`<!DOCTYPE html><html><head><title>CIN</title><style>body{margin:0}iframe{width:100vw;height:100vh;border:none}</style></head><body><iframe src="${cinDocumentData}"></iframe></body></html>`);
+                          win.document.close();
+                        }}
+                        className="btn btn-secondary btn-sm flex-1"
+                      >
+                        Ouvrir PDF
+                      </button>
+                      <button
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = cinDocumentData;
+                          link.download = `CIN-${student.full_name}.pdf`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="btn btn-secondary btn-sm flex-1"
+                      >
+                        Télécharger
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

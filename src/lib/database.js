@@ -266,8 +266,8 @@ async function initDb() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS documents (
       id SERIAL PRIMARY KEY,
-      auto_ecole_id INT NOT NULL REFERENCES auto_ecoles(id) ON DELETE CASCADE,
-      student_id INT NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      auto_ecole_id INT REFERENCES auto_ecoles(id) ON DELETE CASCADE,
+      student_id INT REFERENCES students(id) ON DELETE CASCADE,
       type VARCHAR(50) NOT NULL,
       name VARCHAR(255) NOT NULL,
       file_path VARCHAR(500) NOT NULL,
@@ -312,6 +312,24 @@ async function initDb() {
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'documents' AND column_name = 'file_content') THEN
         ALTER TABLE documents ADD COLUMN file_content TEXT;
+      END IF;
+    END $$
+  `);
+
+  // Migration: make documents.student_id and auto_ecole_id nullable (needed for profile/logo uploads)
+  await db.query(`
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'documents' AND column_name = 'student_id' AND is_nullable = 'NO'
+      ) THEN
+        ALTER TABLE documents ALTER COLUMN student_id DROP NOT NULL;
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'documents' AND column_name = 'auto_ecole_id' AND is_nullable = 'NO'
+      ) THEN
+        ALTER TABLE documents ALTER COLUMN auto_ecole_id DROP NOT NULL;
       END IF;
     END $$
   `);
