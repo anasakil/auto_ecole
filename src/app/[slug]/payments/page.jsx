@@ -491,8 +491,8 @@ function Payments() {
       <div className="card">
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
           {/* Search */}
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="relative flex-1 min-w-0">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
@@ -500,38 +500,46 @@ function Payments() {
               placeholder="Rechercher par nom ou CIN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all placeholder-gray-400"
+              className="w-full pl-10 pr-9 h-10 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all placeholder-gray-400"
             />
             {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 transition-colors">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             )}
           </div>
-          {/* Month filter */}
-          <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-36">
-            <option value="">Tous les mois</option>
-            {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-          {/* Year filter */}
-          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-28">
-            <option value="">Toutes années</option>
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+          {/* Month picker */}
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <input
+              type="month"
+              value={filterYear && filterMonth ? `${filterYear}-${String(filterMonth).padStart(2,'0')}` : ''}
+              onChange={(e) => {
+                if (e.target.value) {
+                  const [y, m] = e.target.value.split('-');
+                  setFilterYear(y); setFilterMonth(String(parseInt(m)));
+                } else {
+                  setFilterYear(''); setFilterMonth('');
+                }
+              }}
+              className={`h-10 pl-9 pr-3 text-sm border rounded-xl outline-none transition-all cursor-pointer ${
+                filterMonth || filterYear ? 'bg-primary-50 border-primary-300 text-primary-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            />
+          </div>
           {/* Method filter */}
-          <div className="relative sm:w-52">
+          <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
             <select
               value={filterMethod}
               onChange={(e) => setFilterMethod(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all appearance-none"
+              className={`h-10 pl-9 pr-8 text-sm border rounded-xl outline-none transition-all appearance-none cursor-pointer ${
+                filterMethod ? 'bg-primary-50 border-primary-300 text-primary-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
             >
               <option value="">Toutes les méthodes</option>
               <option value="Cash">Espèces</option>
@@ -540,15 +548,20 @@ function Payments() {
               <option value="TPE">TPE</option>
             </select>
           </div>
-          {/* Count badge */}
-          <div className="flex items-center">
-            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-100 px-3 py-2 rounded-xl whitespace-nowrap">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+          {/* Reset / count */}
+          {(searchTerm || filterMethod || filterMonth || filterYear) ? (
+            <button
+              onClick={() => { setSearchTerm(''); setFilterMethod(''); setFilterMonth(''); setFilterYear(''); }}
+              className="inline-flex items-center gap-1.5 h-10 px-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all whitespace-nowrap"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              Réinitialiser
+            </button>
+          ) : (
+            <span className="inline-flex items-center h-10 px-3 text-sm text-gray-400 whitespace-nowrap">
               {filteredPayments.length} paiement{filteredPayments.length !== 1 ? 's' : ''}
             </span>
-          </div>
+          )}
         </div>
 
         {/* Payments Table */}

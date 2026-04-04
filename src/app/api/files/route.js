@@ -6,7 +6,7 @@ import path from 'path';
 const { requireAuth } = require('@/lib/tenant');
 const db = require('@/lib/database');
 
-const ALLOWED_SUBFOLDERS = new Set(['documents', 'profiles', 'contracts', 'photos']);
+const ALLOWED_SUBFOLDERS = new Set(['documents', 'profiles', 'contracts', 'photos', 'logos']);
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -78,9 +78,29 @@ export async function POST(request) {
     const filePath = path.join(uploadsDir, fileName);
 
     const bytes = await file.arrayBuffer();
-    await writeFile(filePath, Buffer.from(bytes));
+    const buffer = Buffer.from(bytes);
+    await writeFile(filePath, buffer);
 
     const relativePath = ['uploads', subfolder, fileName].join('/');
+
+    // Always persist base64 content in DB so files survive Vercel /tmp resets
+    try {
+      const base64Content = toBase64(filePath, buffer);
+      const autoEcoleId = auth.autoEcoleId || null;
+      await db.createDocument(autoEcoleId, {
+        student_id: null,
+        type: file.type.startsWith('image/') ? 'Image' : 'PDF',
+        name: file.name,
+        file_path: relativePath,
+        file_type: path.extname(file.name).toLowerCase().replace('.', ''),
+        file_size: file.size,
+        file_content: base64Content,
+      });
+    } catch (dbErr) {
+      // Non-fatal: file is on disk, DB persistence failed
+      console.error('[files POST] DB persist error:', dbErr);
+    }
+
     return NextResponse.json({ success: true, filePath: relativePath, fileName });
   } catch (error) {
     console.error('[files POST]', error);

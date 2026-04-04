@@ -147,13 +147,17 @@ function StudentDetail() {
 
         // Load profile image if exists
         if (data.profile_image) {
-          const imgData = await api.files.getBase64(data.profile_image);
-          setProfileImageData(imgData);
+          try {
+            const imgData = await api.files.getBase64(data.profile_image);
+            if (imgData) setProfileImageData(imgData);
+          } catch {}
         }
         // Load CIN document if exists
         if (data.cin_document) {
-          const cinData = await api.files.getBase64(data.cin_document);
-          setCinDocumentData(cinData);
+          try {
+            const cinData = await api.files.getBase64(data.cin_document);
+            if (cinData) setCinDocumentData(cinData);
+          } catch {}
         }
       } else {
         router.push(`/${slug}/students`);
@@ -546,6 +550,22 @@ function StudentDetail() {
       </html>
     `);
     printWindow.document.close();
+  }
+
+  function printImage(dataUrl, title) {
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: Arial, sans-serif; background: #fff; padding: 20px; }
+      h3 { margin-bottom: 16px; color: #1e40af; font-size: 16px; }
+      img { max-width: 100%; max-height: 85vh; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 4px; }
+      @media print { body { padding: 0; } }
+    </style></head><body>
+      <h3>${title}</h3>
+      <img src="${dataUrl}" />
+      <script>window.onload = function(){ window.print(); }<\/script>
+    </body></html>`);
+    win.document.close();
   }
 
   function printQRCode() {
@@ -1271,7 +1291,8 @@ function StudentDetail() {
                 <img
                   src={profileImageData}
                   alt="Profile"
-                  className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-primary-200"
+                  className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-primary-200 cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => window.open(profileImageData, '_blank')}
                 />
               ) : (
                 <div className="w-32 h-32 rounded-full mx-auto bg-gray-200 flex items-center justify-center">
@@ -1281,51 +1302,94 @@ function StudentDetail() {
                 </div>
               )}
             </div>
-            <button
-              onClick={handleUploadProfileImage}
-              disabled={uploadingImage}
-              className="btn btn-secondary btn-sm w-full"
-            >
-              {uploadingImage ? 'Chargement...' : 'Changer la photo'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleUploadProfileImage}
+                disabled={uploadingImage}
+                className="btn btn-secondary btn-sm flex-1"
+              >
+                {uploadingImage ? 'Chargement...' : profileImageData ? 'Changer' : 'Ajouter photo'}
+              </button>
+              {profileImageData && (
+                <button
+                  onClick={() => printImage(profileImageData, `Photo – ${student.full_name}`)}
+                  className="btn btn-secondary btn-sm px-2"
+                  title="Imprimer la photo"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* CIN Document */}
           <div className="card">
             <h2 className="card-header">Copie CIN</h2>
             {cinDocumentData ? (
-              <div className="mb-4">
+              <div className="mb-3">
                 {cinDocumentData.startsWith('data:image') ? (
                   <img
                     src={cinDocumentData}
                     alt="CIN"
-                    className="w-full rounded-lg border cursor-pointer hover:opacity-80"
+                    className="w-full rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => window.open(cinDocumentData, '_blank')}
                   />
                 ) : (
-                  <div className="p-4 bg-gray-100 rounded-lg text-center">
-                    <svg className="w-12 h-12 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div
+                    className="p-4 bg-gray-50 rounded-lg text-center border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => {
+                      try {
+                        const [header, b64] = cinDocumentData.split(',');
+                        const mime = header.match(/:(.*?);/)[1];
+                        const binary = atob(b64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        const blob = new Blob([bytes], { type: mime });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                      } catch {}
+                    }}
+                  >
+                    <svg className="w-10 h-10 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
-                    <p className="text-sm text-gray-600">Document PDF</p>
+                    <p className="text-sm font-medium text-gray-700">Document PDF</p>
+                    <p className="text-xs text-gray-400 mt-1">Cliquer pour ouvrir</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="p-4 bg-gray-50 rounded-lg text-center mb-4">
-                <svg className="w-12 h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-4 bg-gray-50 rounded-lg text-center mb-3 border border-dashed border-gray-200">
+                <svg className="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <p className="text-sm text-gray-500">Aucun document</p>
+                <p className="text-sm text-gray-400">Aucun document CIN</p>
               </div>
             )}
-            <button
-              onClick={handleUploadCinDocument}
-              disabled={uploadingImage}
-              className="btn btn-secondary btn-sm w-full"
-            >
-              {cinDocumentData ? 'Remplacer le CIN' : 'Ajouter copie CIN'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleUploadCinDocument}
+                disabled={uploadingImage}
+                className="btn btn-secondary btn-sm flex-1"
+              >
+                {uploadingImage ? 'Chargement...' : cinDocumentData ? 'Remplacer' : 'Ajouter CIN'}
+              </button>
+              {cinDocumentData && cinDocumentData.startsWith('data:image') && (
+                <button
+                  onClick={() => printImage(cinDocumentData, `CIN – ${student.full_name}`)}
+                  className="btn btn-secondary btn-sm px-2"
+                  title="Imprimer le CIN"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* QR Code */}
@@ -1518,50 +1582,56 @@ function StudentDetail() {
                   const isDoc = ['doc', 'docx', 'odt', 'odf'].includes(ext);
 
                   return (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
                       <div
-                        className="flex items-center flex-1 cursor-pointer"
+                        className="flex items-center flex-1 cursor-pointer min-w-0"
                         onClick={() => handleViewDocument(doc)}
                       >
                         {isImage ? (
-                          <svg className="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
+                          doc.file_content ? (
+                            <img src={doc.file_content} alt={doc.name} className="w-10 h-10 rounded object-cover mr-3 border border-gray-200 flex-shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 rounded bg-green-50 border border-green-200 flex items-center justify-center mr-3 flex-shrink-0">
+                              <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          )
                         ) : isPdf ? (
-                          <svg className="w-6 h-6 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          </svg>
-                        ) : isDoc ? (
-                          <svg className="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
+                          <div className="w-10 h-10 rounded bg-red-50 border border-red-200 flex items-center justify-center mr-3 flex-shrink-0">
+                            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                          </div>
                         ) : (
-                          <svg className="w-6 h-6 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          </svg>
+                          <div className="w-10 h-10 rounded bg-blue-50 border border-blue-200 flex items-center justify-center mr-3 flex-shrink-0">
+                            <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
                         )}
-                        <div>
-                          <span className="text-sm font-medium truncate block max-w-[140px]">{doc.name}</span>
-                          <span className="text-xs text-gray-500 uppercase">{ext}</span>
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium truncate block">{doc.name}</span>
+                          <span className="text-xs text-gray-400 uppercase">{ext}{doc.file_size ? ` · ${Math.round(doc.file_size / 1024)}Ko` : ''}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 ml-2">
                         <button
                           onClick={() => handleViewDocument(doc)}
-                          className="text-primary-600 hover:text-primary-800 p-1"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-all"
                           title="Voir"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                         </button>
                         <button
                           onClick={() => handleDeleteDocument(doc.id)}
-                          className="text-red-500 hover:text-red-700 p-1"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all"
                           title="Supprimer"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>

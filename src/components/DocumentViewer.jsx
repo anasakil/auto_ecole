@@ -101,7 +101,18 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
 
   function handlePrint() {
     if (!fileData) return;
-    handleOpenNewTab();
+    if (fileType === 'image') {
+      const win = window.open('', '_blank');
+      win.document.write(`<!DOCTYPE html><html><head><title>${doc?.name || 'Document'}</title><style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fff}
+        img{max-width:100%;max-height:100vh;object-fit:contain}
+        @media print{body{padding:0}}
+      </style></head><body><img src="${fileData}"/><script>window.onload=function(){window.print()}<\/script></body></html>`);
+      win.document.close();
+    } else {
+      handleOpenNewTab();
+    }
   }
 
   const fileType = getFileType();
