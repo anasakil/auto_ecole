@@ -10,53 +10,57 @@ const ALLOWED_SUBFOLDERS = new Set(['documents', 'profiles', 'contracts', 'photo
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-function getUploadsBase() {
-  return process.env.VERCEL ? '/tmp' : path.resolve(process.cwd(), 'uploads');
+const MIME_MAP = {
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf',
+  '.svg': 'image/svg+xml',
+};
+
+function toBase64(filePathOrExt, buffer) {
+  const ext = path.extname(filePathOrExt).toLowerCase();
+  const mime = MIME_MAP[ext] || 'application/octet-stream';
+  return `data:${mime};base64,${buffer.toString('base64')}`;
 }
 
-async function getUploadsDir(subfolder = 'documents') {
-  const safe = subfolder.replace(/[^a-zA-Z0-9_-]/g, '');
-  const dir = path.resolve(getUploadsBase(), safe);
-  await mkdir(dir, { recursive: true });
-  return dir;
+function getExt(filename) {
+  return path.extname(filename).toLowerCase().replace('.', '');
 }
 
 function generateFileName(originalName) {
   const ext = path.extname(originalName).toLowerCase().replace(/[^.a-z0-9]/g, '');
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `${timestamp}-${random}${ext}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
 }
 
-/**
- * Resolve and validate a file path is within allowed directories.
- * Returns the resolved absolute path or null if unauthorized.
- */
-function resolveAllowedPath(rawPath) {
-  if (!rawPath || typeof rawPath !== 'string') return null;
+// On Vercel files go to /tmp; locally to uploads/
+function getUploadDir(subfolder) {
+  const safe = subfolder.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (process.env.VERCEL) return path.join('/tmp', safe);
+  return path.resolve(process.cwd(), 'uploads', safe);
+}
 
-  // Normalize separators
+// Validate that a relative path like "uploads/profiles/xxx.jpg" is safe
+function isSafePath(rawPath) {
+  if (!rawPath || typeof rawPath !== 'string') return false;
+  if (rawPath.includes('\0') || rawPath.includes('..')) return false;
   const normalized = rawPath.replace(/\\/g, '/');
+  return (
+    normalized.startsWith('uploads/') ||
+    normalized.startsWith('/tmp/') ||
+    normalized.startsWith('tmp/')
+  );
+}
 
-  // Block null bytes and traversal before resolve
-  if (normalized.includes('\0')) return null;
-
-  const uploadsBase = path.resolve(process.cwd(), 'uploads');
-  const tmpBase     = path.resolve('/tmp');
-  const publicBase  = path.resolve(process.cwd(), 'public');
-
-  const resolved = path.resolve(process.cwd(), normalized);
-
-  const allowed =
-    resolved.startsWith(uploadsBase + path.sep) ||
-    resolved.startsWith(uploadsBase + '/') ||
-    resolved === uploadsBase ||
-    resolved.startsWith(tmpBase + path.sep) ||
-    resolved.startsWith(tmpBase + '/') ||
-    resolved.startsWith(publicBase + path.sep) ||
-    resolved.startsWith(publicBase + '/');
-
-  return allowed ? resolved : null;
+// Resolve a stored relative path like "uploads/profiles/xxx.jpg" to an absolute path
+// On Vercel: uploads/profiles/xxx  →  /tmp/profiles/xxx
+// Locally:   uploads/profiles/xxx  →  <cwd>/uploads/profiles/xxx
+function resolveStoredPath(rawPath) {
+  const normalized = rawPath.replace(/\\/g, '/');
+  if (process.env.VERCEL) {
+    // Map uploads/xxx → /tmp/xxx
+    const withoutPrefix = normalized.replace(/^uploads\//, '');
+    return path.join('/tmp', withoutPrefix);
+  }
+  return path.resolve(process.cwd(), normalized);
 }
 
 export async function POST(request) {
@@ -73,35 +77,38 @@ export async function POST(request) {
     if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ success: false, error: 'Type de fichier non autorisé' }, { status: 400 });
     if (file.size > MAX_FILE_SIZE) return NextResponse.json({ success: false, error: 'Fichier trop volumineux (max 5 Mo)' }, { status: 400 });
 
-    const uploadsDir = await getUploadsDir(subfolder);
     const fileName = generateFileName(file.name);
-    const filePath = path.join(uploadsDir, fileName);
+    const uploadDir = getUploadDir(subfolder);
+    await mkdir(uploadDir, { recursive: true });
+    const absolutePath = path.join(uploadDir, fileName);
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    await writeFile(absolutePath, buffer);
 
-    const relativePath = ['uploads', subfolder, fileName].join('/');
+    // Always use uploads/subfolder/filename as the stored path (canonical)
+    const relativePath = `uploads/${subfolder}/${fileName}`;
 
-    // Always persist base64 content in DB so files survive Vercel /tmp resets
+    // Persist base64 in DB — this is the source of truth on Vercel
+    const base64Content = toBase64(absolutePath, buffer);
+    const autoEcoleId = auth.autoEcoleId || null;
     try {
-      const base64Content = toBase64(filePath, buffer);
-      const autoEcoleId = auth.autoEcoleId || null;
       await db.createDocument(autoEcoleId, {
         student_id: null,
         type: file.type.startsWith('image/') ? 'Image' : 'PDF',
         name: file.name,
         file_path: relativePath,
-        file_type: path.extname(file.name).toLowerCase().replace('.', ''),
+        file_type: getExt(file.name),
         file_size: file.size,
         file_content: base64Content,
       });
     } catch (dbErr) {
-      // Non-fatal: file is on disk, DB persistence failed
       console.error('[files POST] DB persist error:', dbErr);
+      // Still return success — file is on disk for local dev
     }
 
-    return NextResponse.json({ success: true, filePath: relativePath, fileName });
+    // Return base64 directly so client can display immediately without a second request
+    return NextResponse.json({ success: true, filePath: relativePath, fileName, base64: base64Content });
   } catch (error) {
     console.error('[files POST]', error);
     return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
@@ -117,44 +124,51 @@ export async function GET(request) {
     const rawPath = searchParams.get('path');
 
     if (!rawPath) return NextResponse.json({ success: false, error: 'Chemin manquant' }, { status: 400 });
+    if (!isSafePath(rawPath)) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
 
-    const fullPath = resolveAllowedPath(rawPath);
-    if (!fullPath) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
+    const normalized = rawPath.replace(/\\/g, '/');
 
-    const normalizedPath = rawPath.replace(/\\/g, '/');
-
-    // Helper: try DB lookup with both slash variants and with/without tenant filter
-    async function tryDb(path) {
-      const paths = [path, path.replace(/\//g, '\\')];
-      for (const p of paths) {
-        // Try with tenant filter first, then without (for profile images not linked to a document)
+    // 1. Try DB — try both slash variants and with/without tenant
+    try {
+      const pathVariants = [normalized, normalized.replace(/\//g, '\\')];
+      for (const p of pathVariants) {
         let doc = auth.autoEcoleId ? await db.getDocumentByPath(p, auth.autoEcoleId) : null;
         if (!doc) doc = await db.getDocumentByPath(p, null);
-        if (doc?.file_content) return doc.file_content;
+        if (doc?.file_content) return NextResponse.json({ data: doc.file_content });
       }
-      return null;
-    }
-
-    // Always try DB first — base64 content is always stored there for Vercel compatibility
-    try {
-      const content = await tryDb(normalizedPath);
-      if (content) return NextResponse.json({ data: content });
     } catch (dbErr) {
-      console.error('[files GET] DB lookup error:', dbErr);
+      console.error('[files GET] DB error:', dbErr);
     }
 
-    // Try local filesystem (dev) or /tmp (Vercel)
-    const candidates = [fullPath];
-    if (process.env.VERCEL) {
-      const tmpResolved = resolveAllowedPath(normalizedPath.replace(/^uploads\//, '/tmp/'));
-      if (tmpResolved) candidates.push(tmpResolved);
-    }
+    // 2. Try filesystem — resolve canonical path (handles Vercel /tmp mapping)
+    const fsPaths = [
+      resolveStoredPath(normalized),
+      // Also try the raw path relative to cwd (local dev fallback)
+      path.resolve(process.cwd(), normalized),
+    ];
 
-    for (const candidate of candidates) {
-      if (existsSync(candidate)) {
-        const buf = await readFile(candidate);
-        return NextResponse.json({ data: toBase64(candidate, buf) });
-      }
+    for (const candidate of fsPaths) {
+      try {
+        if (existsSync(candidate)) {
+          const buf = await readFile(candidate);
+          const data = toBase64(candidate, buf);
+
+          // Back-fill DB so next request is instant
+          try {
+            await db.createDocument(auth.autoEcoleId || null, {
+              student_id: null,
+              type: buf ? 'Image' : 'PDF',
+              name: path.basename(candidate),
+              file_path: normalized,
+              file_type: getExt(candidate),
+              file_size: buf.length,
+              file_content: data,
+            });
+          } catch {}
+
+          return NextResponse.json({ data });
+        }
+      } catch {}
     }
 
     return NextResponse.json({ success: false, error: 'Fichier introuvable' }, { status: 404 });
@@ -172,27 +186,20 @@ export async function DELETE(request) {
     const { searchParams } = new URL(request.url);
     const rawPath = searchParams.get('path');
 
-    if (!rawPath) return NextResponse.json({ success: false, error: 'Chemin manquant' }, { status: 400 });
+    if (!rawPath || !isSafePath(rawPath)) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
 
-    const fullPath = resolveAllowedPath(rawPath);
-    if (!fullPath) return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 });
+    const fsPaths = [
+      resolveStoredPath(rawPath.replace(/\\/g, '/')),
+      path.resolve(process.cwd(), rawPath.replace(/\\/g, '/')),
+    ];
 
-    if (existsSync(fullPath)) await unlink(fullPath);
+    for (const p of fsPaths) {
+      try { if (existsSync(p)) await unlink(p); } catch {}
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[files DELETE]', error);
     return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
   }
-}
-
-function toBase64(filePath, buffer) {
-  const ext = path.extname(filePath).toLowerCase();
-  const mimeTypes = {
-    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-    '.gif': 'image/gif', '.webp': 'image/webp', '.pdf': 'application/pdf',
-    '.svg': 'image/svg+xml',
-  };
-  const mimeType = mimeTypes[ext] || 'application/octet-stream';
-  return `data:${mimeType};base64,${buffer.toString('base64')}`;
 }

@@ -328,16 +328,18 @@ function StudentDetail() {
   async function handleProfileFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Show instant local preview
+    const reader = new FileReader();
+    reader.onload = (ev) => setProfileImageData(ev.target.result);
+    reader.readAsDataURL(file);
     try {
       setUploadingImage(true);
       const uploadResult = await api.files.upload(file, 'profiles');
       if (uploadResult.filePath) {
-        const result = await api.students.updateImage(student.id, 'profile_image', uploadResult.filePath);
-        if (result.success) {
-          loadStudent();
-        } else {
-          alert('Erreur lors du téléchargement de l\'image');
-        }
+        await api.students.updateImage(student.id, 'profile_image', uploadResult.filePath);
+        if (uploadResult.base64) setProfileImageData(uploadResult.base64);
+      } else {
+        alert(uploadResult.error || 'Erreur lors du téléchargement de l\'image');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -355,20 +357,28 @@ function StudentDetail() {
   async function handleCinFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Show instant local preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setCinDocumentData(ev.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setCinDocumentData('data:application/pdf;base64,placeholder');
+    }
     try {
       setUploadingImage(true);
       const uploadResult = await api.files.upload(file, 'documents');
       if (uploadResult.filePath) {
-        const result = await api.students.updateImage(student.id, 'cin_document', uploadResult.filePath);
-        if (result.success) {
-          loadStudent();
-        } else {
-          alert('Erreur lors du téléchargement du document');
-        }
+        await api.students.updateImage(student.id, 'cin_document', uploadResult.filePath);
+        if (uploadResult.base64) setCinDocumentData(uploadResult.base64);
+      } else {
+        alert(uploadResult.error || 'Erreur lors du téléchargement du document');
+        setCinDocumentData(null);
       }
     } catch (error) {
       console.error('Error uploading CIN:', error);
       alert('Erreur lors du téléchargement');
+      setCinDocumentData(null);
     } finally {
       setUploadingImage(false);
       e.target.value = '';
@@ -387,15 +397,31 @@ function StudentDetail() {
       const uploadResult = await api.files.upload(file, 'documents');
       if (uploadResult.filePath) {
         const fileExt = file.name.split('.').pop().toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
         await api.documents.create({
           student_id: student.id,
-          type: ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt) ? 'Image' : 'PDF',
+          type: isImage ? 'Image' : 'PDF',
           name: file.name,
           file_path: uploadResult.filePath,
           file_type: fileExt,
           file_size: file.size,
+          file_content: uploadResult.base64 || null,
         });
+        // Optimistic: add to list instantly with base64 thumbnail from upload response
+        if (uploadResult.base64) {
+          setDocuments(prev => [{
+            id: Date.now(), // temp id until reload
+            name: file.name,
+            file_path: uploadResult.filePath,
+            file_type: fileExt,
+            file_size: file.size,
+            file_content: uploadResult.base64,
+            type: isImage ? 'Image' : 'PDF',
+          }, ...prev]);
+        }
         loadStudent();
+      } else {
+        alert(uploadResult.error || 'Erreur lors du téléchargement');
       }
     } catch (error) {
       console.error('Error uploading document:', error);

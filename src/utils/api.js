@@ -125,7 +125,7 @@ const api = {
       }
       return fetch('/api/files', options).then(r => r.json());
     },
-    getBase64: (filePath) => tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`).then(r => r.data),
+    getBase64: (filePath) => tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`).then(r => r?.data || null).catch(() => null),
     deleteFile: (filePath) => tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`, { method: 'DELETE' }),
   },
 

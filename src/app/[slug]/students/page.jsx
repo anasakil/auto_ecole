@@ -171,6 +171,7 @@ function Students() {
                     file_path: uploadResult.filePath,
                     file_type: fileExt,
                     file_size: doc.file.size,
+                    file_content: uploadResult.base64 || null,
                   });
                 }
               } catch (err) {
