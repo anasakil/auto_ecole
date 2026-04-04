@@ -127,16 +127,10 @@ const api = {
     },
     getBase64: async (filePath) => {
       if (!filePath) return null;
-      // Supabase public URL — fetch directly, no server round-trip needed
+      // Supabase public URL — return as-is for <img src> and <iframe src>
+      // No need to convert to base64; direct URL works everywhere
       if (filePath.startsWith('http')) {
-        try {
-          const res = await fetch(filePath);
-          if (!res.ok) return null;
-          const buf = await res.arrayBuffer();
-          const mime = res.headers.get('content-type') || 'application/octet-stream';
-          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-          return `data:${mime};base64,${b64}`;
-        } catch { return null; }
+        return filePath;
       }
       // Legacy path — go through /api/files
       return tenantFetch(`/api/files?path=${encodeURIComponent(filePath)}`).then(r => r?.data || null).catch(() => null);

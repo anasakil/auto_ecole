@@ -29,14 +29,19 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
     setLoading(true);
     setError(null);
     try {
+      // Supabase public URL — use directly, no server round-trip
+      if (filePath.startsWith('http')) {
+        setFileData(filePath);
+        setLoading(false);
+        return;
+      }
       const resp = await fetch(`/api/files?path=${encodeURIComponent(filePath)}`, {
         credentials: 'include',
         headers: slug ? { 'x-tenant-slug': slug } : {},
       });
       const json = await resp.json();
-      console.log('[DocumentViewer] files API response:', resp.status, json?.success, json?.error, json?.data ? 'has data' : 'no data');
       const data = json?.data;
-      if (data && typeof data === 'string' && data.startsWith('data:')) {
+      if (data && typeof data === 'string' && (data.startsWith('data:') || data.startsWith('http'))) {
         setFileData(data);
       } else {
         setError(`Fichier introuvable (${resp.status}${json?.error ? ': ' + json.error : ''}). Veuillez régénérer le document.`);
@@ -59,6 +64,8 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
 
   function makeBlobUrl() {
     if (!fileData) return null;
+    // Direct URL (Supabase Storage) — use as-is
+    if (fileData.startsWith('http')) return fileData;
     if (blobUrlRef.current) return blobUrlRef.current;
     try {
       const [header, b64] = fileData.split(',');
@@ -80,7 +87,7 @@ function DocumentViewer({ isOpen, onClose, document: doc, filePath }) {
     const url = makeBlobUrl() || fileData;
     const link = document.createElement('a');
     link.href = url;
-    link.download = (doc?.name || 'document') + (fileData.startsWith('data:application/pdf') ? '.pdf' : '');
+    link.download = (doc?.name || 'document') + ((fileData.startsWith('data:application/pdf') || fileData.endsWith('.pdf')) ? '.pdf' : '');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

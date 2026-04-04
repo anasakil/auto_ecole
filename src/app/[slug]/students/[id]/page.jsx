@@ -1364,7 +1364,7 @@ function StudentDetail() {
             <h2 className="card-header">Copie CIN</h2>
             {cinDocumentData ? (
               <div className="mb-3">
-                {cinDocumentData.startsWith('data:image') ? (
+                {(cinDocumentData.startsWith('data:image') || (cinDocumentData.startsWith('http') && !cinDocumentData.includes('.pdf'))) ? (
                   <img
                     src={cinDocumentData}
                     alt="CIN"
@@ -1423,7 +1423,7 @@ function StudentDetail() {
               >
                 {uploadingCin ? 'Chargement...' : cinDocumentData ? 'Remplacer' : 'Ajouter CIN'}
               </button>
-              {cinDocumentData && cinDocumentData.startsWith('data:image') && (
+              {cinDocumentData && (cinDocumentData.startsWith('data:image') || (cinDocumentData.startsWith('http') && !cinDocumentData.includes('.pdf'))) && (
                 <button
                   onClick={() => printImage(cinDocumentData, `CIN – ${student.full_name}`)}
                   className="btn btn-secondary btn-sm px-2"
