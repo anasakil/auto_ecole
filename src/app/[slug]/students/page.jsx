@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/utils/api';
@@ -18,6 +18,81 @@ import { formatDate, formatCurrency, calculateRemainingDays } from '@/utils/help
 import { TablePageSkeleton } from '@/components/skeletons';
 import { useTenant } from '@/contexts/TenantContext';
 
+const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function DateFilterModal({ isOpen, onClose, filterMonth, filterYear, onApply, availableYears }) {
+  const [localMonth, setLocalMonth] = useState(filterMonth);
+  const [localYear, setLocalYear] = useState(filterYear);
+  const years = availableYears.length > 0 ? availableYears : [new Date().getFullYear()];
+
+  useEffect(() => {
+    if (isOpen) { setLocalMonth(filterMonth); setLocalYear(filterYear); }
+  }, [isOpen, filterMonth, filterYear]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fadeIn">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-semibold text-gray-900">Filtrer par date</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Year selector */}
+        <div className="mb-5">
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Année</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setLocalYear('')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${!localYear ? 'bg-primary-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >Toutes</button>
+            {years.map(y => (
+              <button
+                key={y}
+                onClick={() => setLocalYear(String(y))}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${localYear === String(y) ? 'bg-primary-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >{y}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Month grid */}
+        <div className="mb-6">
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Mois</label>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setLocalMonth('')}
+              className={`py-2 rounded-lg text-sm font-medium transition-all col-span-3 ${!localMonth ? 'bg-primary-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >Tous les mois</button>
+            {MONTHS.map((m, i) => (
+              <button
+                key={i+1}
+                onClick={() => setLocalMonth(String(i+1))}
+                className={`py-2 rounded-lg text-sm font-medium transition-all ${localMonth === String(i+1) ? 'bg-primary-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >{m.slice(0,3)}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setLocalMonth(''); setLocalYear(''); }}
+            className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+          >Réinitialiser</button>
+          <button
+            onClick={() => { onApply(localMonth, localYear); onClose(); }}
+            className="flex-1 py-2 text-sm font-medium text-white bg-primary-500 rounded-xl hover:bg-primary-600 transition-colors shadow-sm"
+          >Appliquer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Students() {
   const [students, setStudents] = useState([]);
   const [studentImages, setStudentImages] = useState({});
@@ -28,6 +103,9 @@ function Students() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [filterYear, setFilterYear] = useState('');
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [sortKey, setSortKey] = useState('');
+  const [sortDir, setSortDir] = useState('asc');
   const [isSaving, setIsSaving] = useState(false);
 
   const toast = useToast();
@@ -202,7 +280,22 @@ function Students() {
     return matchesSearch && matchesStatus && matchMonth && matchYear;
   });
 
-  const { page: studentsPage, setPage: setStudentsPage, totalPages: studentsTotalPages, paginatedData: paginatedStudents } = usePagination(filteredStudents, 20);
+  function handleSort(key) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  }
+
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    if (!sortKey) return 0;
+    let va = a[sortKey], vb = b[sortKey];
+    if (sortKey === 'payment') { va = (a.paid_amount || 0); vb = (b.paid_amount || 0); }
+    if (sortKey === 'remaining') { va = calculateRemainingDays(a.training_start_date, a.training_duration_days); vb = calculateRemainingDays(b.training_start_date, b.training_duration_days); }
+    if (va == null) return 1; if (vb == null) return -1;
+    if (typeof va === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortDir === 'asc' ? va - vb : vb - va;
+  });
+
+  const { page: studentsPage, setPage: setStudentsPage, totalPages: studentsTotalPages, paginatedData: paginatedStudents } = usePagination(sortedStudents, 20);
 
   // Stats calculation
   const stats = {
@@ -227,26 +320,27 @@ function Students() {
     { key: 'remaining', label: 'Restant', accessor: (s) => formatCurrency(s.total_price - (s.paid_amount || 0)) },
   ];
 
+  function SortIcon({ colKey }) {
+    if (sortKey !== colKey) return <svg className="w-3.5 h-3.5 text-gray-300 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>;
+    return sortDir === 'asc'
+      ? <svg className="w-3.5 h-3.5 text-primary-500 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+      : <svg className="w-3.5 h-3.5 text-primary-500 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>;
+  }
+
   // Table columns definition
   const tableColumns = [
     {
       key: 'photo',
-      header: 'Photo',
+      header: '',
       sortable: false,
-      width: '60px',
+      width: '52px',
       render: (_, student) => (
         <Link href={`/${slug}/students/${student.id}`}>
           {studentImages[student.id] ? (
-            <img
-              src={studentImages[student.id]}
-              alt={student.full_name}
-              className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 hover:border-primary-400 transition-colors"
-            />
+            <img src={studentImages[student.id]} alt={student.full_name} className="w-9 h-9 rounded-full object-cover border-2 border-gray-200 hover:border-primary-400 transition-colors" />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center border-2 border-gray-200">
-              <span className="text-primary-600 font-semibold text-sm">
-                {student.full_name.charAt(0).toUpperCase()}
-              </span>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center border-2 border-gray-100">
+              <span className="text-primary-600 font-bold text-sm">{student.full_name.charAt(0).toUpperCase()}</span>
             </div>
           )}
         </Link>
@@ -254,29 +348,24 @@ function Students() {
     },
     {
       key: 'full_name',
-      header: 'Nom Complet',
+      header: <button onClick={() => handleSort('full_name')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Nom Complet<SortIcon colKey="full_name" /></button>,
       render: (value, student) => (
-        <Link
-          href={`/${slug}/students/${student.id}`}
-          className="font-medium text-primary-600 hover:text-primary-700"
-        >
-          {value}
-        </Link>
+        <Link href={`/${slug}/students/${student.id}`} className="font-medium text-gray-800 hover:text-primary-600 transition-colors">{value}</Link>
       ),
     },
     {
       key: 'cin',
-      header: 'CIN',
-      render: (value) => value || '-',
+      header: <button onClick={() => handleSort('cin')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">CIN<SortIcon colKey="cin" /></button>,
+      render: (value) => <span className="font-mono text-sm text-gray-600">{value || '—'}</span>,
     },
     {
       key: 'phone',
-      header: 'Téléphone',
-      render: (value) => value || '-',
+      header: <button onClick={() => handleSort('phone')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Téléphone<SortIcon colKey="phone" /></button>,
+      render: (value) => <span className="text-gray-600">{value || '—'}</span>,
     },
     {
       key: 'license_type',
-      header: 'Permis / Statut',
+      header: <button onClick={() => handleSort('status')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Permis / Statut<SortIcon colKey="status" /></button>,
       render: (value, student) => {
         const statusVariant = student.status === 'En formation' ? 'primary' : student.status === 'Permis obtenu' ? 'success' : 'gray';
         return (
@@ -289,93 +378,49 @@ function Students() {
     },
     {
       key: 'remaining',
-      header: 'Jours Restants',
+      header: <button onClick={() => handleSort('remaining')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Jours Restants<SortIcon colKey="remaining" /></button>,
       render: (_, student) => {
-        if (student.status !== 'En formation') return '-';
+        if (student.status !== 'En formation') return <span className="text-gray-400">—</span>;
         const remaining = calculateRemainingDays(student.training_start_date, student.training_duration_days);
         return (
-          <span className={remaining > 0 ? 'text-green-600' : 'text-red-600'}>
-            {remaining} jours
-          </span>
+          <span className={`font-medium ${remaining > 0 ? 'text-green-600' : 'text-red-500'}`}>{remaining}j</span>
         );
       },
     },
     {
       key: 'payment',
-      header: 'Paiement',
+      header: <button onClick={() => handleSort('payment')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Paiement<SortIcon colKey="payment" /></button>,
       render: (_, student) => {
-        const paidAmount = student.paid_amount || 0;
-        const remaining = student.total_price - paidAmount;
+        const paid = student.paid_amount || 0;
+        const rem = student.total_price - paid;
         return (
-          <div className="text-sm">
-            <span className="text-green-600">{formatCurrency(paidAmount)}</span>
-            {remaining > 0 && (
-              <span className="text-red-600 ml-1">
-                ({formatCurrency(remaining)} restant)
-              </span>
-            )}
+          <div className="text-sm leading-tight">
+            <span className="text-green-600 font-medium">{formatCurrency(paid)}</span>
+            {rem > 0 && <div className="text-red-500 text-xs">{formatCurrency(rem)} restant</div>}
           </div>
         );
       },
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: '',
       sortable: false,
       render: (_, student) => (
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => router.push(`/${slug}/students/${student.id}`)}
-            title="Voir détails"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => handleEdit(student)}
-            title="Modifier"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => handleDelete(student)}
-            title="Supprimer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </Button>
+        <div className="flex gap-1">
+          <button onClick={(e) => { e.stopPropagation(); router.push(`/${slug}/students/${student.id}`); }} title="Voir" className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); handleEdit(student); }} title="Modifier" className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); handleDelete(student); }} title="Supprimer" className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </button>
         </div>
       ),
     },
   ];
 
-  // Filter options
-  const filterOptions = [
-    {
-      key: 'status',
-      label: 'Statut',
-      type: 'select',
-      value: filterStatus,
-      onChange: setFilterStatus,
-      options: [
-        { value: '', label: 'Tous les statuts' },
-        { value: 'En formation', label: 'En formation' },
-        { value: 'Permis obtenu', label: 'Permis obtenu' },
-        { value: 'Inactif', label: 'Inactif' },
-      ],
-    },
-  ];
 
   if (loading) {
     return <TablePageSkeleton columns={8} rows={10} />;
@@ -457,46 +502,60 @@ function Students() {
       </div>
 
       {/* Search and Filters */}
-      <Card className="mb-6">
-        <div className="flex flex-col sm:flex-row gap-3 mb-5">
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input
               type="text"
               placeholder="Rechercher par nom, CIN ou téléphone..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-9 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all placeholder-gray-400"
+              onChange={(e) => { setSearchTerm(e.target.value); setStudentsPage(1); }}
+              className="w-full pl-10 pr-9 h-10 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all placeholder-gray-400"
             />
             {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 transition-colors">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             )}
           </div>
-          <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-36">
-            <option value="">Tous les mois</option>
-            {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 outline-none transition-all appearance-none sm:w-28">
-            <option value="">Toutes années</option>
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-          <div className="relative sm:w-52">
+
+          {/* Date filter button */}
+          <button
+            onClick={() => setShowDateModal(true)}
+            className={`inline-flex items-center gap-2 h-10 px-4 text-sm font-medium rounded-xl border transition-all whitespace-nowrap ${
+              filterMonth || filterYear
+                ? 'bg-primary-50 border-primary-300 text-primary-700 shadow-sm'
+                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {filterMonth || filterYear
+              ? `${filterMonth ? MONTHS[parseInt(filterMonth)-1].slice(0,3) : ''}${filterMonth && filterYear ? ' ' : ''}${filterYear || ''}`
+              : 'Date inscription'}
+            {(filterMonth || filterYear) && (
+              <span onClick={(e) => { e.stopPropagation(); setFilterMonth(''); setFilterYear(''); }} className="w-4 h-4 flex items-center justify-center rounded-full bg-primary-200 hover:bg-primary-300 text-primary-700 ml-0.5">
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+              </span>
+            )}
+          </button>
+
+          {/* Status filter */}
+          <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all appearance-none"
+              onChange={(e) => { setFilterStatus(e.target.value); setStudentsPage(1); }}
+              className={`h-10 pl-9 pr-8 text-sm border rounded-xl outline-none transition-all appearance-none cursor-pointer ${
+                filterStatus ? 'bg-primary-50 border-primary-300 text-primary-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
             >
               <option value="">Tous les statuts</option>
               <option value="En formation">En formation</option>
@@ -504,22 +563,54 @@ function Students() {
               <option value="Inactif">Inactif</option>
             </select>
           </div>
+
+          {/* Reset */}
           {(searchTerm || filterStatus || filterMonth || filterYear) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearchTerm('');
-                setFilterStatus('');
-                setFilterMonth('');
-                setFilterYear('');
-              }}
+            <button
+              onClick={() => { setSearchTerm(''); setFilterStatus(''); setFilterMonth(''); setFilterYear(''); }}
+              className="inline-flex items-center gap-1.5 h-10 px-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all whitespace-nowrap border border-transparent hover:border-gray-200"
             >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               Réinitialiser
-            </Button>
+            </button>
           )}
         </div>
-      </Card>
+
+        {/* Active filters summary */}
+        {(filterMonth || filterYear || filterStatus) && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+            <span className="text-xs text-gray-400">Filtres actifs :</span>
+            {filterStatus && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 text-xs font-medium rounded-full border border-primary-200">
+                {filterStatus}
+                <button onClick={() => setFilterStatus('')} className="hover:text-primary-900"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              </span>
+            )}
+            {filterMonth && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 text-xs font-medium rounded-full border border-primary-200">
+                {MONTHS[parseInt(filterMonth)-1]}
+                <button onClick={() => setFilterMonth('')} className="hover:text-primary-900"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              </span>
+            )}
+            {filterYear && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 text-xs font-medium rounded-full border border-primary-200">
+                {filterYear}
+                <button onClick={() => setFilterYear('')} className="hover:text-primary-900"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+              </span>
+            )}
+            <span className="text-xs text-gray-400 ml-auto">{filteredStudents.length} résultat{filteredStudents.length !== 1 ? 's' : ''}</span>
+          </div>
+        )}
+      </div>
+
+      <DateFilterModal
+        isOpen={showDateModal}
+        onClose={() => setShowDateModal(false)}
+        filterMonth={filterMonth}
+        filterYear={filterYear}
+        onApply={(m, y) => { setFilterMonth(m); setFilterYear(y); setStudentsPage(1); }}
+        availableYears={availableYears}
+      />
 
       {/* Students Table */}
       <Card padding="none">
