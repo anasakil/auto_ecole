@@ -155,144 +155,129 @@ function Invoices() {
     if (gsm) contactParts.push(`GSM : ${gsm}`);
     const contactLine = contactParts.join(' – ');
 
+    const legalOneLine = [capitalLine, regLine, contactLine].filter(Boolean).join('  ·  ');
+
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Facture ${invoice.invoice_number}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 36px 44px; max-width: 820px; margin: 0 auto; color: #1a1a2e; font-size: 13px; }
+    printWindow.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
+      <title>Facture ${invoice.invoice_number}</title>
+      <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Segoe UI',Arial,sans-serif;font-size:12.5px;color:#1e293b;background:#fff;padding:30px 36px;max-width:800px;margin:0 auto}
 
-            /* ── TOP HEADER ── */
-            .top-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 3px solid #1e40af; margin-bottom: 28px; }
-            .school-block { flex: 1; }
-            .school-name { font-size: 22px; font-weight: 800; color: #1e40af; letter-spacing: 0.5px; text-transform: uppercase; }
-            .school-legal { font-size: 10.5px; color: #555; margin-top: 5px; line-height: 1.7; }
-            .school-legal strong { color: #1e40af; }
-            .invoice-badge { text-align: right; flex-shrink: 0; margin-left: 30px; }
-            .invoice-badge .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-            .invoice-badge .number { font-size: 26px; font-weight: 800; color: #1e40af; line-height: 1; margin: 4px 0; }
-            .invoice-badge .date { font-size: 12px; color: #555; }
-            .status-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 6px; }
-            .status-emise { background: #dbeafe; color: #1e40af; }
-            .status-payee { background: #dcfce7; color: #166534; }
-            .status-annulee { background: #f1f5f9; color: #64748b; }
+        /* HEADER */
+        .hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding-bottom:14px;border-bottom:2px solid #2563eb;margin-bottom:22px}
+        .hdr-left{flex:1;min-width:0}
+        .school-name{font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .school-addr{font-size:10.5px;color:#64748b;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .legal-line{font-size:9.5px;color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .hdr-right{text-align:right;flex-shrink:0}
+        .inv-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#2563eb}
+        .inv-num{font-size:22px;font-weight:800;color:#0f172a;line-height:1.1;margin:2px 0 6px}
+        .inv-meta{font-size:11px;color:#64748b;margin-bottom:2px}
+        .inv-meta b{color:#1e293b}
+        .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;margin-top:4px}
+        .b-paid{background:#dcfce7;color:#166534}
+        .b-emit{background:#dbeafe;color:#1d4ed8}
+        .b-cancel{background:#f1f5f9;color:#475569}
 
-            /* ── CLIENT + INVOICE META ── */
-            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 28px; }
-            .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; }
-            .meta-box-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; }
-            .client-name { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
-            .meta-row { margin-bottom: 4px; color: #475569; font-size: 12px; }
+        /* INFO GRID */
+        .info-grid{display:flex;gap:14px;margin-bottom:22px}
+        .info-box{flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:13px 16px;min-width:0}
+        .ibox-title{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#2563eb;border-bottom:1px solid #e2e8f0;padding-bottom:7px;margin-bottom:9px}
+        .ibox-name{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .ibox-row{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:#64748b;margin-bottom:3px;gap:8px}
+        .ibox-row span:last-child{font-weight:600;color:#1e293b;text-align:right;white-space:nowrap}
 
-            /* ── ITEMS TABLE ── */
-            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-            .items-table thead tr { background: #1e40af; color: white; }
-            .items-table th { padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
-            .items-table th:last-child { text-align: right; }
-            .items-table td { padding: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-            .items-table td:last-child { text-align: right; font-weight: 700; font-size: 14px; color: #1e40af; }
-            .items-table tbody tr:last-child td { border-bottom: none; }
+        /* TABLE */
+        table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px}
+        thead tr{background:#f1f5f9}
+        th{padding:9px 12px;text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#374151;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+        th:last-child{text-align:right}
+        td{padding:11px 12px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:top}
+        td:last-child{text-align:right;font-weight:700;color:#1e293b;white-space:nowrap}
+        .desc-main{font-weight:600;color:#0f172a;margin-bottom:1px}
+        .desc-sub{font-size:10.5px;color:#94a3b8}
+        tbody tr:last-child td{border-bottom:1px solid #e2e8f0}
 
-            /* ── TOTAL ── */
-            .total-section { display: flex; justify-content: flex-end; margin-bottom: 32px; }
-            .total-box { background: #1e40af; color: white; padding: 18px 36px; border-radius: 10px; text-align: right; }
-            .total-label { font-size: 12px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.8px; }
-            .total-amount { font-size: 30px; font-weight: 800; margin-top: 4px; }
+        /* TOTALS */
+        .totals-wrap{display:flex;justify-content:flex-end;margin-bottom:22px}
+        .totals-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 20px;min-width:240px}
+        .t-row{display:flex;justify-content:space-between;font-size:11.5px;color:#3b82f6;margin-bottom:5px}
+        .t-row.final{font-size:14px;font-weight:800;color:#1d4ed8;border-top:1px solid #bfdbfe;padding-top:9px;margin-top:5px;margin-bottom:0}
 
-            /* ── NOTES ── */
-            .notes-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; margin-bottom: 28px; font-size: 12px; color: #92400e; }
+        /* NOTES */
+        .notes{background:#f8fafc;border-left:3px solid #2563eb;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;padding:10px 14px;font-size:11.5px;color:#475569;margin-bottom:22px}
+        .notes-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#2563eb;margin-bottom:4px}
 
-            /* ── FOOTER ── */
-            .footer { border-top: 2px solid #e2e8f0; padding-top: 16px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
-            .footer .thank-you { font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 6px; }
+        /* FOOTER */
+        .footer{border-top:1px solid #e2e8f0;padding-top:12px;text-align:center;font-size:9.5px;color:#94a3b8;line-height:1.9}
+        .footer-ty{font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:4px}
 
-            @media print { body { padding: 20px 28px; } }
-          </style>
-        </head>
-        <body>
-          <!-- TOP HEADER -->
-          <div class="top-header">
-            <div class="school-block">
-              <div class="school-name">${schoolName}</div>
-              <div class="school-legal">
-                ${capitalLine ? `<div><strong>${capitalLine}</strong></div>` : ''}
-                ${regLine ? `<div>${regLine}</div>` : ''}
-                ${schoolAddress ? `<div>${schoolAddress}${city ? ' – ' + city : ''}</div>` : ''}
-                ${contactLine ? `<div>${contactLine}</div>` : ''}
-                ${schoolEmail ? `<div>${schoolEmail}</div>` : ''}
-              </div>
-            </div>
-            <div class="invoice-badge">
-              <div class="label">Facture</div>
-              <div class="number">${invoice.invoice_number}</div>
-              <div class="date">Date : ${formatDate(invoice.issue_date)}</div>
-              <span class="status-badge ${invoice.status === 'Payée' ? 'status-payee' : invoice.status === 'Annulée' ? 'status-annulee' : 'status-emise'}">${invoice.status}</span>
-            </div>
-          </div>
+        @media print{body{padding:16px 22px}@page{margin:10mm}}
+      </style></head><body>
 
-          <!-- CLIENT + META -->
-          <div class="meta-grid">
-            <div class="meta-box">
-              <div class="meta-box-title">Facturé à</div>
-              <div class="client-name">${student?.full_name || invoice.full_name || '-'}</div>
-              ${(student?.phone) ? `<div class="meta-row">Tél : ${student.phone}</div>` : ''}
-              ${(student?.address) ? `<div class="meta-row">Adresse : ${student.address}</div>` : ''}
-            </div>
-            <div class="meta-box">
-              <div class="meta-box-title">Détails de la facture</div>
-              <div class="meta-row">N° : <strong>${invoice.invoice_number}</strong></div>
-              <div class="meta-row">Date d'émission : ${formatDate(invoice.issue_date)}</div>
-              ${invoice.due_date ? `<div class="meta-row">Échéance : ${formatDate(invoice.due_date)}</div>` : ''}
-            </div>
-          </div>
+      <div class="hdr">
+        <div class="hdr-left">
+          <div class="school-name">${schoolName}</div>
+          ${(schoolAddress || city) ? `<div class="school-addr">${schoolAddress}${city ? ' – ' + city : ''}${schoolEmail ? '  ·  ' + schoolEmail : ''}</div>` : ''}
+          ${legalOneLine ? `<div class="legal-line">${legalOneLine}</div>` : ''}
+        </div>
+        <div class="hdr-right">
+          <div class="inv-label">Facture</div>
+          <div class="inv-num">${invoice.invoice_number}</div>
+          <div class="inv-meta">Date : <b>${formatDate(invoice.issue_date)}</b></div>
+          ${invoice.due_date ? `<div class="inv-meta">Échéance : <b>${formatDate(invoice.due_date)}</b></div>` : ''}
+          <span class="badge ${invoice.status === 'Payée' ? 'b-paid' : invoice.status === 'Annulée' ? 'b-cancel' : 'b-emit'}">${invoice.status}</span>
+        </div>
+      </div>
 
-          <!-- ITEMS -->
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Détails</th>
-                <th>Montant</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Formation Permis ${student?.license_type || 'B'}</strong></td>
-                <td style="color:#64748b;">Formation complète pour l'obtention du permis de conduire</td>
-                <td>${formatCurrency(invoice.amount)}</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="info-grid">
+        <div class="info-box">
+          <div class="ibox-title">Facturé à</div>
+          <div class="ibox-name">${student?.full_name || invoice.full_name || '-'}</div>
+          ${student?.phone ? `<div class="ibox-row"><span>Téléphone</span><span>${student.phone}</span></div>` : ''}
+          ${student?.address ? `<div class="ibox-row"><span>Adresse</span><span>${student.address}</span></div>` : ''}
+          <div class="ibox-row"><span>Permis</span><span>Catégorie ${student?.license_type || 'B'}</span></div>
+        </div>
+        <div class="info-box">
+          <div class="ibox-title">Détails facture</div>
+          <div class="ibox-row"><span>N° Facture</span><span>${invoice.invoice_number}</span></div>
+          <div class="ibox-row"><span>Date émission</span><span>${formatDate(invoice.issue_date)}</span></div>
+          ${invoice.due_date ? `<div class="ibox-row"><span>Échéance</span><span>${formatDate(invoice.due_date)}</span></div>` : ''}
+          <div class="ibox-row"><span>Statut</span><span>${invoice.status}</span></div>
+        </div>
+      </div>
 
-          <!-- TOTAL -->
-          <div class="total-section">
-            <div class="total-box">
-              <div class="total-label">Total à payer</div>
-              <div class="total-amount">${formatCurrency(invoice.amount)}</div>
-            </div>
-          </div>
+      <table>
+        <thead><tr><th style="width:45%">Désignation</th><th>Catégorie</th><th>Qté</th><th>Montant</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div class="desc-main">Formation à la conduite – Permis ${student?.license_type || 'B'}</div><div class="desc-sub">${schoolName}</div></td>
+            <td>Catégorie ${student?.license_type || 'B'}</td>
+            <td>1</td>
+            <td>${formatCurrency(invoice.amount)}</td>
+          </tr>
+        </tbody>
+      </table>
 
-          ${invoice.notes ? `
-          <div class="notes-box">
-            <strong>Notes :</strong> ${invoice.notes}
-          </div>
-          ` : ''}
+      <div class="totals-wrap">
+        <div class="totals-box">
+          <div class="t-row"><span>Sous-total</span><span>${formatCurrency(invoice.amount)}</span></div>
+          <div class="t-row"><span>TVA (exonéré)</span><span>–</span></div>
+          <div class="t-row final"><span>Total TTC</span><span>${formatCurrency(invoice.amount)}</span></div>
+        </div>
+      </div>
 
-          <!-- FOOTER -->
-          <div class="footer">
-            <div class="thank-you">Merci pour votre confiance !</div>
-            ${capitalLine ? `<div>${capitalLine}</div>` : ''}
-            ${regLine ? `<div>${regLine}</div>` : ''}
-            ${schoolAddress ? `<div>${schoolAddress}${city ? ' – ' + city : ''}</div>` : ''}
-            ${contactLine ? `<div>${contactLine}</div>` : ''}
-          </div>
+      ${invoice.notes ? `<div class="notes"><div class="notes-lbl">Notes</div>${invoice.notes}</div>` : ''}
 
-          <script>window.onload = function() { window.print(); }</script>
-        </body>
-      </html>
-    `);
+      <div class="footer">
+        <div class="footer-ty">Merci pour votre confiance !</div>
+        <div>${schoolName}${schoolAddress ? ' – ' + schoolAddress : ''}${city ? ' – ' + city : ''}</div>
+        ${legalOneLine ? `<div>${legalOneLine}</div>` : ''}
+      </div>
+
+      <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`);
     printWindow.document.close();
   }
 
