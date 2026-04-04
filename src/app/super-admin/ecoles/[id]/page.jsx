@@ -144,10 +144,12 @@ export default function EditEcolePage() {
         const formData = new FormData();
         formData.append('file', logoFile);
         formData.append('subfolder', 'logos');
-        const uploadRes = await fetch('/api/files', { method: 'POST', body: formData });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
+        const uploadRes = await fetch('/api/files', { method: 'POST', body: formData, credentials: 'include' });
+        const uploadData = await uploadRes.json();
+        if (uploadRes.ok && uploadData.filePath) {
           logoPath = uploadData.filePath;
+        } else {
+          throw new Error(uploadData.error || 'Erreur lors du téléchargement du logo');
         }
       }
 
