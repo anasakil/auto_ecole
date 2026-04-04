@@ -35,6 +35,8 @@ function StudentDetail() {
   const [invoices, setInvoices] = useState([]);
   const [profileImageData, setProfileImageData] = useState(null);
   const [cinDocumentData, setCinDocumentData] = useState(null);
+  const [cinDocumentVisible, setCinDocumentVisible] = useState(false);
+  const [loadingCin, setLoadingCin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showLicenseModal, setShowLicenseModal] = useState(false);
@@ -158,14 +160,9 @@ function StudentDetail() {
         } else {
           setProfileImageData(null);
         }
-        // Load CIN document if exists
-        if (data.cin_document) {
-          api.files.getBase64(data.cin_document).then(cinData => {
-            if (cinData) setCinDocumentData(cinData);
-          });
-        } else {
-          setCinDocumentData(null);
-        }
+        // CIN document: not auto-loaded, user clicks to view
+        setCinDocumentData(null);
+        setCinDocumentVisible(false);
       } else {
         router.push(`/${slug}/students`);
       }
@@ -364,28 +361,22 @@ function StudentDetail() {
   async function handleCinFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Show instant local preview for images
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setCinDocumentData(ev.target.result);
-      reader.readAsDataURL(file);
-    } else {
-      setCinDocumentData('data:application/pdf;base64,placeholder');
-    }
     try {
       setUploadingCin(true);
       const uploadResult = await api.files.upload(file, 'documents');
       if (uploadResult.filePath) {
         await api.students.updateImage(student.id, 'cin_document', uploadResult.filePath);
-        if (uploadResult.base64) setCinDocumentData(uploadResult.base64);
+        // After upload, reset so user can click to view
+        setCinDocumentData(null);
+        setCinDocumentVisible(false);
+        // Update student state to reflect cin_document exists
+        setStudent(prev => ({ ...prev, cin_document: uploadResult.filePath }));
       } else {
         alert(uploadResult.error || 'Erreur lors du téléchargement du document');
-        setCinDocumentData(null);
       }
     } catch (error) {
       console.error('Error uploading CIN:', error);
       alert('Erreur lors du téléchargement');
-      setCinDocumentData(null);
     } finally {
       setUploadingCin(false);
       e.target.value = '';
@@ -528,59 +519,152 @@ function StudentDetail() {
     }
   }
 
-  function printInvoice(invoice) {
-    const settings = { school_name: 'Auto-École Maroc' }; // Default
+  async function printInvoice(invoice) {
+    const settings = await api.settings.get().catch(() => ({})) || {};
+    const schoolName = settings.school_name || 'Auto-École';
+    const schoolAddress = settings.address || '';
+    const schoolPhone = settings.phone || '';
+    const schoolEmail = settings.email || '';
+    const capital = settings.capital || '';
+    const rc = settings.commercial_register || '';
+    const tp = settings.tp || '';
+    const taxId = settings.tax_register || '';
+    const cnss = settings.cnss || '';
+    const ice = settings.ice || '';
+    const gsm = settings.gsm || '';
+    const fax = settings.fax || '';
+    const city = settings.city || '';
+
+    const capitalLine = capital ? `SARL au Capital de ${capital}` : '';
+    const regParts = [];
+    if (rc) regParts.push(`RC : ${rc}`);
+    if (tp) regParts.push(`T.P : ${tp}`);
+    if (taxId) regParts.push(`I.F : ${taxId}`);
+    if (cnss) regParts.push(`CNSS : ${cnss}`);
+    if (ice) regParts.push(`ICE : ${ice}`);
+    const regLine = regParts.join(' – ');
+    const contactParts = [];
+    if (schoolPhone) contactParts.push(`Tél./Fax : ${schoolPhone}`);
+    if (fax && fax !== schoolPhone) contactParts.push(`Fax : ${fax}`);
+    if (gsm) contactParts.push(`GSM : ${gsm}`);
+    const contactLine = contactParts.join(' – ');
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html>
         <head>
           <title>Facture ${invoice.invoice_number}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #1e40af; padding-bottom: 20px; }
-            .logo { font-size: 24px; font-weight: bold; color: #1e40af; }
-            .invoice-info { text-align: right; }
-            .invoice-number { font-size: 20px; font-weight: bold; }
-            .section { margin-bottom: 30px; }
-            .section-title { font-weight: bold; color: #333; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-            .row { display: flex; justify-content: space-between; padding: 8px 0; }
-            .total { font-size: 24px; font-weight: bold; text-align: right; margin-top: 20px; padding-top: 20px; border-top: 2px solid #1e40af; }
-            .footer { margin-top: 60px; text-align: center; color: #666; font-size: 12px; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 36px 44px; max-width: 820px; margin: 0 auto; color: #1a1a2e; font-size: 13px; }
+            .top-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 3px solid #1e40af; margin-bottom: 28px; }
+            .school-block { flex: 1; }
+            .school-name { font-size: 22px; font-weight: 800; color: #1e40af; letter-spacing: 0.5px; text-transform: uppercase; }
+            .school-legal { font-size: 10.5px; color: #555; margin-top: 5px; line-height: 1.7; }
+            .school-legal strong { color: #1e40af; }
+            .invoice-badge { text-align: right; flex-shrink: 0; margin-left: 30px; }
+            .invoice-badge .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+            .invoice-badge .number { font-size: 26px; font-weight: 800; color: #1e40af; line-height: 1; margin: 4px 0; }
+            .invoice-badge .date { font-size: 12px; color: #555; }
+            .status-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 6px; }
+            .status-emise { background: #dbeafe; color: #1e40af; }
+            .status-payee { background: #dcfce7; color: #166534; }
+            .status-annulee { background: #f1f5f9; color: #64748b; }
+            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 28px; }
+            .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; }
+            .meta-box-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; }
+            .client-name { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+            .meta-row { margin-bottom: 4px; color: #475569; font-size: 12px; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+            .items-table thead tr { background: #1e40af; color: white; }
+            .items-table th { padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+            .items-table th:last-child { text-align: right; }
+            .items-table td { padding: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+            .items-table td:last-child { text-align: right; font-weight: 700; font-size: 14px; color: #1e40af; }
+            .total-section { display: flex; justify-content: flex-end; margin-bottom: 32px; }
+            .total-box { background: #1e40af; color: white; padding: 18px 36px; border-radius: 10px; text-align: right; }
+            .total-label { font-size: 12px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.8px; }
+            .total-amount { font-size: 30px; font-weight: 800; margin-top: 4px; }
+            .notes-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; margin-bottom: 28px; font-size: 12px; color: #92400e; }
+            .footer { border-top: 2px solid #e2e8f0; padding-top: 16px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
+            .footer .thank-you { font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 6px; }
+            @media print { body { padding: 20px 28px; } }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="logo">${settings.school_name}</div>
-            <div class="invoice-info">
-              <div class="invoice-number">${invoice.invoice_number}</div>
-              <div>Date: ${formatDate(invoice.issue_date)}</div>
-              <div>Statut: ${invoice.status}</div>
+          <div class="top-header">
+            <div class="school-block">
+              <div class="school-name">${schoolName}</div>
+              <div class="school-legal">
+                ${capitalLine ? `<div><strong>${capitalLine}</strong></div>` : ''}
+                ${regLine ? `<div>${regLine}</div>` : ''}
+                ${schoolAddress ? `<div>${schoolAddress}${city ? ' – ' + city : ''}</div>` : ''}
+                ${contactLine ? `<div>${contactLine}</div>` : ''}
+                ${schoolEmail ? `<div>${schoolEmail}</div>` : ''}
+              </div>
+            </div>
+            <div class="invoice-badge">
+              <div class="label">Facture</div>
+              <div class="number">${invoice.invoice_number}</div>
+              <div class="date">Date : ${formatDate(invoice.issue_date)}</div>
+              <span class="status-badge ${invoice.status === 'Payée' ? 'status-payee' : invoice.status === 'Annulée' ? 'status-annulee' : 'status-emise'}">${invoice.status}</span>
             </div>
           </div>
 
-          <div class="section">
-            <div class="section-title">Client</div>
-            <div class="row"><span>Nom:</span><span>${student.full_name}</span></div>
-            <div class="row"><span>CIN:</span><span>${student.cin || '-'}</span></div>
-            <div class="row"><span>Téléphone:</span><span>${student.phone || '-'}</span></div>
-            <div class="row"><span>Adresse:</span><span>${student.address || '-'}</span></div>
+          <div class="meta-grid">
+            <div class="meta-box">
+              <div class="meta-box-title">Facturé à</div>
+              <div class="client-name">${student.full_name}</div>
+              ${student.phone ? `<div class="meta-row">Tél : ${student.phone}</div>` : ''}
+              ${student.address ? `<div class="meta-row">Adresse : ${student.address}</div>` : ''}
+            </div>
+            <div class="meta-box">
+              <div class="meta-box-title">Détails de la facture</div>
+              <div class="meta-row">N° : <strong>${invoice.invoice_number}</strong></div>
+              <div class="meta-row">Date d'émission : ${formatDate(invoice.issue_date)}</div>
+              ${invoice.due_date ? `<div class="meta-row">Échéance : ${formatDate(invoice.due_date)}</div>` : ''}
+            </div>
           </div>
 
-          <div class="section">
-            <div class="section-title">Détails</div>
-            <div class="row"><span>Formation Permis ${student.license_type}</span><span>${formatCurrency(invoice.amount)}</span></div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Détails</th>
+                <th>Montant</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Formation Permis ${student.license_type}</strong></td>
+                <td style="color:#64748b;">Formation complète pour l'obtention du permis de conduire</td>
+                <td>${formatCurrency(invoice.amount)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="total-section">
+            <div class="total-box">
+              <div class="total-label">Total à payer</div>
+              <div class="total-amount">${formatCurrency(invoice.amount)}</div>
+            </div>
           </div>
 
-          <div class="total">
-            Total: ${formatCurrency(invoice.amount)}
+          ${invoice.notes ? `
+          <div class="notes-box">
+            <strong>Notes :</strong> ${invoice.notes}
           </div>
+          ` : ''}
 
           <div class="footer">
-            <p>Merci pour votre confiance!</p>
-            <p>${settings.school_name}</p>
+            <div class="thank-you">Merci pour votre confiance !</div>
+            ${capitalLine ? `<div>${capitalLine}</div>` : ''}
+            ${regLine ? `<div>${regLine}</div>` : ''}
+            ${schoolAddress ? `<div>${schoolAddress}${city ? ' – ' + city : ''}</div>` : ''}
+            ${contactLine ? `<div>${contactLine}</div>` : ''}
           </div>
 
-          <script>window.onload = function() { window.print(); }</script>
+          <script>window.onload = function() { window.print(); }<\/script>
         </body>
       </html>
     `);
@@ -863,9 +947,6 @@ function StudentDetail() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="card-header mb-0">Paiements & Factures</h2>
               <div className="flex gap-2">
-                <button onClick={handleCreateInvoice} className="btn btn-secondary btn-sm">
-                  + Facture manuelle
-                </button>
                 <button onClick={() => setShowPaymentModal(true)} className="btn btn-primary btn-sm">
                   + Paiement
                 </button>
@@ -966,36 +1047,6 @@ function StudentDetail() {
               <p className="text-gray-500 text-center py-4">Aucun paiement enregistré</p>
             )}
 
-            {/* Standalone invoices (not linked to a payment) */}
-            {invoices.filter(inv => !inv.payment_id).length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Factures manuelles</p>
-                <div className="space-y-2">
-                  {invoices.filter(inv => !inv.payment_id).map((inv) => (
-                    <div key={inv.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium">{inv.invoice_number}</span>
-                        <span className="text-sm text-gray-500">{formatDate(inv.issue_date)}</span>
-                        <span className="text-sm font-medium">{formatCurrency(inv.amount)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`badge ${inv.status === 'Payée' ? 'badge-success' : 'badge-info'}`}>
-                          {inv.status}
-                        </span>
-                        <button
-                          onClick={() => printInvoice(inv)}
-                          className="text-primary-600 hover:text-primary-800 p-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Stages / Sessions */}
@@ -1362,51 +1413,76 @@ function StudentDetail() {
           {/* CIN Document */}
           <div className="card">
             <h2 className="card-header">Copie CIN</h2>
-            {cinDocumentData ? (
-              <div className="mb-3">
-                {(cinDocumentData.startsWith('data:image') || (cinDocumentData.startsWith('http') && !cinDocumentData.includes('.pdf'))) ? (
-                  <img
-                    src={cinDocumentData}
-                    alt="CIN"
-                    className="w-full rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => window.open(cinDocumentData, '_blank')}
-                  />
+            {student.cin_document ? (
+              <>
+                {cinDocumentVisible && cinDocumentData ? (
+                  <div className="mb-3">
+                    {(cinDocumentData.startsWith('data:image') || (cinDocumentData.startsWith('http') && !cinDocumentData.includes('.pdf'))) ? (
+                      <img
+                        src={cinDocumentData}
+                        alt="CIN"
+                        className="w-full rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => window.open(cinDocumentData, '_blank')}
+                      />
+                    ) : (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <iframe
+                          src={cinDocumentData}
+                          className="w-full"
+                          style={{ height: '300px', border: 'none' }}
+                          title="CIN PDF"
+                        />
+                        <div className="flex gap-2 p-2 bg-gray-50 border-t border-gray-200">
+                          <button
+                            onClick={() => {
+                              const win = window.open('', '_blank');
+                              win.document.write(`<!DOCTYPE html><html><head><title>CIN</title><style>body{margin:0}iframe{width:100vw;height:100vh;border:none}</style></head><body><iframe src="${cinDocumentData}"></iframe></body></html>`);
+                              win.document.close();
+                            }}
+                            className="btn btn-secondary btn-sm flex-1"
+                          >
+                            Ouvrir PDF
+                          </button>
+                          <button
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = cinDocumentData;
+                              link.download = `CIN-${student.full_name}.pdf`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                            className="btn btn-secondary btn-sm flex-1"
+                          >
+                            Télécharger
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <iframe
-                      src={cinDocumentData}
-                      className="w-full"
-                      style={{ height: '300px', border: 'none' }}
-                      title="CIN PDF"
-                    />
-                    <div className="flex gap-2 p-2 bg-gray-50 border-t border-gray-200">
-                      <button
-                        onClick={() => {
-                          const win = window.open('', '_blank');
-                          win.document.write(`<!DOCTYPE html><html><head><title>CIN</title><style>body{margin:0}iframe{width:100vw;height:100vh;border:none}</style></head><body><iframe src="${cinDocumentData}"></iframe></body></html>`);
-                          win.document.close();
-                        }}
-                        className="btn btn-secondary btn-sm flex-1"
-                      >
-                        Ouvrir PDF
-                      </button>
-                      <button
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = cinDocumentData;
-                          link.download = `CIN-${student.full_name}.pdf`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        }}
-                        className="btn btn-secondary btn-sm flex-1"
-                      >
-                        Télécharger
-                      </button>
-                    </div>
+                  <div className="p-4 bg-blue-50 rounded-lg text-center mb-3 border border-blue-200">
+                    <svg className="w-10 h-10 text-blue-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-sm text-blue-600 font-medium mb-2">Document CIN disponible</p>
+                    <button
+                      onClick={async () => {
+                        setLoadingCin(true);
+                        try {
+                          const cinData = await api.files.getBase64(student.cin_document);
+                          if (cinData) { setCinDocumentData(cinData); setCinDocumentVisible(true); }
+                        } finally { setLoadingCin(false); }
+                      }}
+                      disabled={loadingCin}
+                      className="btn btn-sm"
+                      style={{ backgroundColor: '#3b82f6', color: 'white' }}
+                    >
+                      {loadingCin ? 'Chargement...' : 'Voir le document'}
+                    </button>
                   </div>
                 )}
-              </div>
+              </>
             ) : (
               <div className="p-4 bg-gray-50 rounded-lg text-center mb-3 border border-dashed border-gray-200">
                 <svg className="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1421,9 +1497,9 @@ function StudentDetail() {
                 disabled={uploadingCin}
                 className="btn btn-secondary btn-sm flex-1"
               >
-                {uploadingCin ? 'Chargement...' : cinDocumentData ? 'Remplacer' : 'Ajouter CIN'}
+                {uploadingCin ? 'Chargement...' : student.cin_document ? 'Remplacer' : 'Ajouter CIN'}
               </button>
-              {cinDocumentData && (cinDocumentData.startsWith('data:image') || (cinDocumentData.startsWith('http') && !cinDocumentData.includes('.pdf'))) && (
+              {cinDocumentVisible && cinDocumentData && (cinDocumentData.startsWith('data:image') || (cinDocumentData.startsWith('http') && !cinDocumentData.includes('.pdf'))) && (
                 <button
                   onClick={() => printImage(cinDocumentData, `CIN – ${student.full_name}`)}
                   className="btn btn-secondary btn-sm px-2"

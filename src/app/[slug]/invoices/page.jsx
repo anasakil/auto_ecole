@@ -122,7 +122,7 @@ function Invoices() {
 
   function printInvoice(invoice) {
     const student = students.find(s => s.id === invoice.student_id);
-    const schoolName = settings?.school_name || 'Auto-École Maroc';
+    const schoolName = settings?.school_name || 'Auto-École';
     const schoolAddress = settings?.address || '';
     const schoolPhone = settings?.phone || '';
     const schoolEmail = settings?.email || '';
@@ -136,20 +136,20 @@ function Invoices() {
     const fax = settings?.fax || '';
     const city = settings?.city || '';
 
-    // Build legal footer lines
-    const legalParts = [];
-    if (capital) legalParts.push(`SARL au Capital de ${capital}`);
+    // Legal identity line (top header)
+    const capitalLine = capital ? `SARL au Capital de ${capital}` : '';
     const regParts = [];
     if (rc) regParts.push(`RC : ${rc}`);
     if (tp) regParts.push(`T.P : ${tp}`);
     if (taxId) regParts.push(`I.F : ${taxId}`);
     if (cnss) regParts.push(`CNSS : ${cnss}`);
     if (ice) regParts.push(`ICE : ${ice}`);
-    if (regParts.length) legalParts.push(regParts.join(' – '));
+    const regLine = regParts.join(' – ');
     const contactParts = [];
-    if (schoolPhone || fax) contactParts.push(`Tél./Fax : ${schoolPhone || fax}`);
+    if (schoolPhone) contactParts.push(`Tél./Fax : ${schoolPhone}`);
+    if (fax && fax !== schoolPhone) contactParts.push(`Fax : ${fax}`);
     if (gsm) contactParts.push(`GSM : ${gsm}`);
-    if (contactParts.length) legalParts.push(contactParts.join(' – '));
+    const contactLine = contactParts.join(' – ');
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -158,105 +158,111 @@ function Invoices() {
           <title>Facture ${invoice.invoice_number}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; }
-            .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 3px solid #1e40af; padding-bottom: 20px; }
-            .logo { font-size: 28px; font-weight: bold; color: #1e40af; }
-            .logo-subtitle { font-size: 12px; color: #666; margin-top: 5px; }
-            .invoice-info { text-align: right; }
-            .invoice-number { font-size: 24px; font-weight: bold; color: #1e40af; }
-            .invoice-date { color: #666; margin-top: 5px; }
-            .client-section { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-            .section { margin-bottom: 30px; }
-            .section-title { font-weight: bold; color: #1e40af; margin-bottom: 15px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-            .info-row { margin-bottom: 8px; }
-            .info-label { color: #666; font-size: 12px; }
-            .info-value { font-weight: 500; }
-            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            .items-table th { background: #f8fafc; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 12px; text-transform: uppercase; color: #64748b; }
-            .items-table td { padding: 15px 12px; border-bottom: 1px solid #e2e8f0; }
-            .items-table .amount { text-align: right; font-weight: 600; }
-            .total-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
-            .total-box { background: #1e40af; color: white; padding: 20px 40px; border-radius: 8px; }
-            .total-label { font-size: 14px; opacity: 0.9; }
-            .total-amount { font-size: 28px; font-weight: bold; }
-            .footer { margin-top: 60px; text-align: center; color: #666; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-            .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 36px 44px; max-width: 820px; margin: 0 auto; color: #1a1a2e; font-size: 13px; }
+
+            /* ── TOP HEADER ── */
+            .top-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 3px solid #1e40af; margin-bottom: 28px; }
+            .school-block { flex: 1; }
+            .school-name { font-size: 22px; font-weight: 800; color: #1e40af; letter-spacing: 0.5px; text-transform: uppercase; }
+            .school-legal { font-size: 10.5px; color: #555; margin-top: 5px; line-height: 1.7; }
+            .school-legal strong { color: #1e40af; }
+            .invoice-badge { text-align: right; flex-shrink: 0; margin-left: 30px; }
+            .invoice-badge .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+            .invoice-badge .number { font-size: 26px; font-weight: 800; color: #1e40af; line-height: 1; margin: 4px 0; }
+            .invoice-badge .date { font-size: 12px; color: #555; }
+            .status-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 6px; }
             .status-emise { background: #dbeafe; color: #1e40af; }
             .status-payee { background: #dcfce7; color: #166534; }
-            @media print { body { padding: 20px; } }
+            .status-annulee { background: #f1f5f9; color: #64748b; }
+
+            /* ── CLIENT + INVOICE META ── */
+            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 28px; }
+            .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; }
+            .meta-box-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; }
+            .client-name { font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+            .meta-row { margin-bottom: 4px; color: #475569; font-size: 12px; }
+
+            /* ── ITEMS TABLE ── */
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+            .items-table thead tr { background: #1e40af; color: white; }
+            .items-table th { padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+            .items-table th:last-child { text-align: right; }
+            .items-table td { padding: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+            .items-table td:last-child { text-align: right; font-weight: 700; font-size: 14px; color: #1e40af; }
+            .items-table tbody tr:last-child td { border-bottom: none; }
+
+            /* ── TOTAL ── */
+            .total-section { display: flex; justify-content: flex-end; margin-bottom: 32px; }
+            .total-box { background: #1e40af; color: white; padding: 18px 36px; border-radius: 10px; text-align: right; }
+            .total-label { font-size: 12px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.8px; }
+            .total-amount { font-size: 30px; font-weight: 800; margin-top: 4px; }
+
+            /* ── NOTES ── */
+            .notes-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; margin-bottom: 28px; font-size: 12px; color: #92400e; }
+
+            /* ── FOOTER ── */
+            .footer { border-top: 2px solid #e2e8f0; padding-top: 16px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.8; }
+            .footer .thank-you { font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 6px; }
+
+            @media print { body { padding: 20px 28px; } }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div>
-              <div class="logo">${schoolName}</div>
-              <div class="logo-subtitle">${schoolAddress}</div>
-              <div class="logo-subtitle">${schoolPhone} ${schoolEmail ? '| ' + schoolEmail : ''}</div>
-            </div>
-            <div class="invoice-info">
-              <div class="invoice-number">${invoice.invoice_number}</div>
-              <div class="invoice-date">Date: ${formatDate(invoice.issue_date)}</div>
-              <div style="margin-top: 10px;">
-                <span class="status-badge ${invoice.status === 'Payée' ? 'status-payee' : 'status-emise'}">${invoice.status}</span>
+          <!-- TOP HEADER -->
+          <div class="top-header">
+            <div class="school-block">
+              <div class="school-name">${schoolName}</div>
+              <div class="school-legal">
+                ${capitalLine ? `<div><strong>${capitalLine}</strong></div>` : ''}
+                ${regLine ? `<div>${regLine}</div>` : ''}
+                ${schoolAddress ? `<div>${schoolAddress}${city ? ' – ' + city : ''}</div>` : ''}
+                ${contactLine ? `<div>${contactLine}</div>` : ''}
+                ${schoolEmail ? `<div>${schoolEmail}</div>` : ''}
               </div>
             </div>
-          </div>
-
-          <div class="client-section">
-            <div>
-              <div class="section-title">Facturé à</div>
-              <div class="info-row">
-                <div class="info-value" style="font-size: 18px; font-weight: 600;">${student?.full_name || invoice.full_name}</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">CIN</div>
-                <div class="info-value">${student?.cin || invoice.cin || '-'}</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Téléphone</div>
-                <div class="info-value">${student?.phone || '-'}</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Adresse</div>
-                <div class="info-value">${student?.address || '-'}</div>
-              </div>
-            </div>
-            <div>
-              <div class="section-title">Détails de la facture</div>
-              <div class="info-row">
-                <div class="info-label">Numéro de facture</div>
-                <div class="info-value">${invoice.invoice_number}</div>
-              </div>
-              <div class="info-row">
-                <div class="info-label">Date d'émission</div>
-                <div class="info-value">${formatDate(invoice.issue_date)}</div>
-              </div>
-              ${invoice.due_date ? `
-              <div class="info-row">
-                <div class="info-label">Date d'échéance</div>
-                <div class="info-value">${formatDate(invoice.due_date)}</div>
-              </div>
-              ` : ''}
+            <div class="invoice-badge">
+              <div class="label">Facture</div>
+              <div class="number">${invoice.invoice_number}</div>
+              <div class="date">Date : ${formatDate(invoice.issue_date)}</div>
+              <span class="status-badge ${invoice.status === 'Payée' ? 'status-payee' : invoice.status === 'Annulée' ? 'status-annulee' : 'status-emise'}">${invoice.status}</span>
             </div>
           </div>
 
+          <!-- CLIENT + META -->
+          <div class="meta-grid">
+            <div class="meta-box">
+              <div class="meta-box-title">Facturé à</div>
+              <div class="client-name">${student?.full_name || invoice.full_name || '-'}</div>
+              ${(student?.phone) ? `<div class="meta-row">Tél : ${student.phone}</div>` : ''}
+              ${(student?.address) ? `<div class="meta-row">Adresse : ${student.address}</div>` : ''}
+            </div>
+            <div class="meta-box">
+              <div class="meta-box-title">Détails de la facture</div>
+              <div class="meta-row">N° : <strong>${invoice.invoice_number}</strong></div>
+              <div class="meta-row">Date d'émission : ${formatDate(invoice.issue_date)}</div>
+              ${invoice.due_date ? `<div class="meta-row">Échéance : ${formatDate(invoice.due_date)}</div>` : ''}
+            </div>
+          </div>
+
+          <!-- ITEMS -->
           <table class="items-table">
             <thead>
               <tr>
                 <th>Description</th>
                 <th>Détails</th>
-                <th style="text-align: right;">Montant</th>
+                <th>Montant</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td><strong>Formation Permis ${student?.license_type || 'B'}</strong></td>
-                <td>Formation complète pour l'obtention du permis de conduire</td>
-                <td class="amount">${formatCurrency(invoice.amount)}</td>
+                <td style="color:#64748b;">Formation complète pour l'obtention du permis de conduire</td>
+                <td>${formatCurrency(invoice.amount)}</td>
               </tr>
             </tbody>
           </table>
 
+          <!-- TOTAL -->
           <div class="total-section">
             <div class="total-box">
               <div class="total-label">Total à payer</div>
@@ -265,16 +271,18 @@ function Invoices() {
           </div>
 
           ${invoice.notes ? `
-          <div class="section">
-            <div class="section-title">Notes</div>
-            <p>${invoice.notes}</p>
+          <div class="notes-box">
+            <strong>Notes :</strong> ${invoice.notes}
           </div>
           ` : ''}
 
+          <!-- FOOTER -->
           <div class="footer">
-            <p>Merci pour votre confiance!</p>
-            ${legalParts.map(line => `<p style="margin-top: 4px;">${line}</p>`).join('')}
-            ${schoolAddress ? `<p style="margin-top: 4px;">${schoolAddress}${city ? ' – ' + city : ''}</p>` : ''}
+            <div class="thank-you">Merci pour votre confiance !</div>
+            ${capitalLine ? `<div>${capitalLine}</div>` : ''}
+            ${regLine ? `<div>${regLine}</div>` : ''}
+            ${schoolAddress ? `<div>${schoolAddress}${city ? ' – ' + city : ''}</div>` : ''}
+            ${contactLine ? `<div>${contactLine}</div>` : ''}
           </div>
 
           <script>window.onload = function() { window.print(); }</script>
