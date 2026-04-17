@@ -283,46 +283,47 @@ function Students() {
   // Table columns definition
   const tableColumns = [
     {
-      key: 'photo',
-      header: '',
-      sortable: false,
-      width: '52px',
+      key: 'student',
+      header: <button onClick={() => handleSort('full_name')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Étudiant<SortIcon colKey="full_name" /></button>,
       render: (_, student) => (
-        <Link href={`/${slug}/students/${student.id}`}>
-          {studentImages[student.id] ? (
-            <img src={studentImages[student.id]} alt={student.full_name} className="w-9 h-9 rounded-full object-cover border-2 border-gray-200 hover:border-primary-400 transition-colors" />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center border-2 border-gray-100">
-              <span className="text-primary-600 font-bold text-sm">{student.full_name.charAt(0).toUpperCase()}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href={`/${slug}/students/${student.id}`} className="flex-shrink-0">
+            {studentImages[student.id] ? (
+              <img src={studentImages[student.id]} alt={student.full_name} className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 hover:border-primary-400 transition-colors" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center border-2 border-gray-100">
+                <span className="text-primary-600 font-bold text-sm">{student.full_name.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
+          </Link>
+          <div className="min-w-0">
+            <Link href={`/${slug}/students/${student.id}`} className="font-semibold text-gray-900 hover:text-primary-600 transition-colors block truncate">{student.full_name}</Link>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+              {student.cin && <span className="font-mono text-xs text-gray-500">{student.cin}</span>}
+              {student.phone && (
+                <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                  {student.phone}
+                </span>
+              )}
+              {(student.ville || student.autre_ville) && (
+                <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  {student.ville === 'Autre' ? student.autre_ville : student.ville}
+                </span>
+              )}
             </div>
-          )}
-        </Link>
+          </div>
+        </div>
       ),
-    },
-    {
-      key: 'full_name',
-      header: <button onClick={() => handleSort('full_name')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Nom Complet<SortIcon colKey="full_name" /></button>,
-      render: (value, student) => (
-        <Link href={`/${slug}/students/${student.id}`} className="font-medium text-gray-800 hover:text-primary-600 transition-colors">{value}</Link>
-      ),
-    },
-    {
-      key: 'cin',
-      header: <button onClick={() => handleSort('cin')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">CIN<SortIcon colKey="cin" /></button>,
-      render: (value) => <span className="font-mono text-sm text-gray-600">{value || '—'}</span>,
-    },
-    {
-      key: 'phone',
-      header: <button onClick={() => handleSort('phone')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Téléphone<SortIcon colKey="phone" /></button>,
-      render: (value) => <span className="text-gray-600">{value || '—'}</span>,
     },
     {
       key: 'license_type',
-      header: <button onClick={() => handleSort('status')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Permis / Statut<SortIcon colKey="status" /></button>,
+      header: <button onClick={() => handleSort('license_type')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Permis / Statut<SortIcon colKey="license_type" /></button>,
       render: (value, student) => {
         const statusVariant = student.status === 'En formation' ? 'primary' : student.status === 'Permis obtenu' ? 'success' : 'gray';
         return (
-          <div className="flex flex-wrap gap-1 items-center">
+          <div className="flex flex-col gap-1">
             <Badge variant="info">Permis {value}</Badge>
             <Badge variant={statusVariant}>{student.status}</Badge>
           </div>
@@ -330,13 +331,26 @@ function Students() {
       },
     },
     {
+      key: 'registration_date',
+      header: <button onClick={() => handleSort('registration_date')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Inscription<SortIcon colKey="registration_date" /></button>,
+      render: (value, student) => (
+        <div className="text-sm">
+          <div className="text-gray-700">{formatDate(value)}</div>
+          {student.birth_date && <div className="text-xs text-gray-400 mt-0.5">Né: {formatDate(student.birth_date)}</div>}
+        </div>
+      ),
+    },
+    {
       key: 'remaining',
-      header: <button onClick={() => handleSort('remaining')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Jours Restants<SortIcon colKey="remaining" /></button>,
+      header: <button onClick={() => handleSort('remaining')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Formation<SortIcon colKey="remaining" /></button>,
       render: (_, student) => {
-        if (student.status !== 'En formation') return <span className="text-gray-400">—</span>;
         const remaining = calculateRemainingDays(student.training_start_date, student.training_duration_days);
+        if (student.status !== 'En formation') return <span className="text-gray-400 text-sm">—</span>;
         return (
-          <span className={`font-medium ${remaining > 0 ? 'text-green-600' : 'text-red-500'}`}>{remaining}j</span>
+          <div className="text-sm">
+            <span className={`font-semibold ${remaining > 0 ? 'text-green-600' : 'text-red-500'}`}>{remaining}j restants</span>
+            <div className="text-xs text-gray-400 mt-0.5">{student.training_duration_days}j total</div>
+          </div>
         );
       },
     },
@@ -345,11 +359,19 @@ function Students() {
       header: <button onClick={() => handleSort('payment')} className="flex items-center font-semibold hover:text-primary-600 transition-colors">Paiement<SortIcon colKey="payment" /></button>,
       render: (_, student) => {
         const paid = student.paid_amount || 0;
-        const rem = student.total_price - paid;
+        const total = student.total_price || 0;
+        const rem = total - paid;
+        const pct = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
         return (
-          <div className="text-sm leading-tight">
-            <span className="text-green-600 font-medium">{formatCurrency(paid)}</span>
-            {rem > 0 && <div className="text-red-500 text-xs">{formatCurrency(rem)} restant</div>}
+          <div className="text-sm min-w-[110px]">
+            <div className="flex justify-between mb-1">
+              <span className="text-green-600 font-medium">{formatCurrency(paid)}</span>
+              <span className="text-gray-400 text-xs">{pct}%</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5">
+              <div className={`h-1.5 rounded-full ${pct === 100 ? 'bg-green-500' : 'bg-primary-500'}`} style={{ width: `${pct}%` }} />
+            </div>
+            {rem > 0 && <div className="text-red-500 text-xs mt-0.5">{formatCurrency(rem)} restant</div>}
           </div>
         );
       },
