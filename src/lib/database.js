@@ -489,6 +489,13 @@ async function initDb() {
     END $$
   `);
 
+  // Migration: add ville and autre_ville columns to students if missing
+  await db.query(`
+    ALTER TABLE students
+      ADD COLUMN IF NOT EXISTS ville VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS autre_ville VARCHAR(100)
+  `);
+
   // Performance indexes
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON attendance(student_id, date);
@@ -600,8 +607,8 @@ async function createStudent(autoEcoleId, student) {
     INSERT INTO students (auto_ecole_id, qr_code, full_name, cin, phone, address, license_type,
       registration_date, status, training_start_date, training_duration_days,
       offer_id, total_price, interested_licenses, reminder_date, internal_notes,
-      profile_image, cin_document, birth_place, birth_date)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      profile_image, cin_document, birth_place, birth_date, ville, autre_ville)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
     RETURNING id
   `, [
     autoEcoleId,
@@ -623,7 +630,9 @@ async function createStudent(autoEcoleId, student) {
     student.profile_image || null,
     student.cin_document || null,
     student.birth_place || null,
-    student.birth_date || null
+    student.birth_date || null,
+    student.ville || null,
+    student.autre_ville || null
   ]);
 
   return { id: result.id, qr_code: qrCode };
@@ -636,8 +645,9 @@ async function updateStudent(id, autoEcoleId, student) {
       registration_date = $6, status = $7, training_start_date = $8, training_duration_days = $9,
       offer_id = $10, total_price = $11, interested_licenses = $12,
       reminder_date = $13, internal_notes = $14,
-      birth_place = $15, birth_date = $16
-    WHERE id = $17 AND auto_ecole_id = $18
+      birth_place = $15, birth_date = $16,
+      ville = $17, autre_ville = $18
+    WHERE id = $19 AND auto_ecole_id = $20
   `, [
     student.full_name,
     student.cin || null,
@@ -655,6 +665,8 @@ async function updateStudent(id, autoEcoleId, student) {
     student.internal_notes || null,
     student.birth_place || null,
     student.birth_date || null,
+    student.ville || null,
+    student.autre_ville || null,
     id,
     autoEcoleId
   ]);

@@ -85,6 +85,91 @@ export const LICENSE_TYPES = [
   { value: 'B', label: 'Permis B (Voiture)' },
   { value: 'C', label: 'Permis C (Camion)' },
   { value: 'D', label: 'Permis D (Bus)' },
+  { value: 'E', label: 'Permis E' },
+];
+
+export const MOROCCAN_CITIES = [
+  {
+    region: 'Souss-Massa (Agadir)',
+    cities: [
+      'Agadir', 'Inezgane', 'Aït Melloul', 'Dcheira El Jihadia', 'Biougra',
+      'Taroudant', 'Tiznit', 'Aourir', 'Taghazout', 'Temsia', 'Oulad Teima',
+      'Chtouka Aït Baha', 'Massa', 'Sidi Ifni', 'Tafraout', 'Belfaa',
+      'Lqliâa', 'Sebt El Guerdane', 'Ait Baha', 'Drarga',
+    ],
+  },
+  {
+    region: 'Marrakech-Safi',
+    cities: [
+      'Marrakech', 'Safi', 'Essaouira', 'El Kelaâ des Sraghna', 'Ben Guerir',
+      'Chichaoua', 'Youssoufia', 'Tahanaout', 'Amizmiz', 'Ait Ourir',
+      'Tamansourt', 'Laattaouia', 'Sidi Bouzid', 'Chemaia',
+    ],
+  },
+  {
+    region: 'Casablanca-Settat',
+    cities: [
+      'Casablanca', 'Mohammedia', 'El Jadida', 'Settat', 'Berrechid',
+      'Benslimane', 'Khouribga', 'Bir Jdid', 'Médiouna', 'Nouaceur',
+    ],
+  },
+  {
+    region: 'Rabat-Salé-Kénitra',
+    cities: [
+      'Rabat', 'Salé', 'Kénitra', 'Témara', 'Skhirat', 'Khmisset',
+      'Sidi Kacem', 'Sidi Slimane',
+    ],
+  },
+  {
+    region: 'Fès-Meknès',
+    cities: [
+      'Fès', 'Meknès', 'Taza', 'Ifrane', 'Sefrou', 'Boulemane',
+      'El Hajeb', 'Moulay Idriss Zerhoun',
+    ],
+  },
+  {
+    region: 'Tanger-Tétouan-Al Hoceïma',
+    cities: [
+      'Tanger', 'Tétouan', 'Al Hoceïma', 'Larache', 'Asilah',
+      'Chefchaouen', 'Fnideq', 'Mdiq',
+    ],
+  },
+  {
+    region: 'Oriental',
+    cities: [
+      'Oujda', 'Nador', 'Berkane', 'Taourirt', 'Jerada', 'Guercif',
+    ],
+  },
+  {
+    region: 'Béni Mellal-Khénifra',
+    cities: [
+      'Béni Mellal', 'Khénifra', 'Azilal', 'Fquih Ben Salah', 'Kasba Tadla',
+    ],
+  },
+  {
+    region: 'Drâa-Tafilalet',
+    cities: [
+      'Errachidia', 'Ouarzazate', 'Zagora', 'Tinghir', 'Midelt',
+    ],
+  },
+  {
+    region: 'Guelmim-Oued Noun',
+    cities: [
+      'Guelmim', 'Sidi Ifni', 'Tan-Tan', 'Assa', 'Zag',
+    ],
+  },
+  {
+    region: 'Laâyoune-Sakia El Hamra',
+    cities: [
+      'Laâyoune', 'Boujdour', 'Tarfaya', 'Es-Semara',
+    ],
+  },
+  {
+    region: 'Dakhla-Oued Ed-Dahab',
+    cities: [
+      'Dakhla', 'Aousserd',
+    ],
+  },
 ];
 
 export const STUDENT_STATUSES = [

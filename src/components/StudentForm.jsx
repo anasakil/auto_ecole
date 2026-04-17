@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { LICENSE_TYPES, STUDENT_STATUSES, getTodayISO } from '@/utils/helpers';
+import { LICENSE_TYPES, STUDENT_STATUSES, MOROCCAN_CITIES, getTodayISO } from '@/utils/helpers';
 import api from '@/utils/api';
 
 function FormField({ label, name, required, error, children }) {
@@ -30,6 +30,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '', cin: '', birth_place: '', birth_date: '', phone: '', email: '', address: '',
+    ville: '', autre_ville: '',
     license_type: 'B', registration_date: getTodayISO(), status: 'En formation',
     training_start_date: getTodayISO(), training_duration_days: 30, offer_id: '', total_price: 0,
     interested_licenses: [], reminder_date: '', internal_notes: '',
@@ -55,7 +56,8 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
       setFormData({
         full_name: student.full_name || '', cin: student.cin || '', birth_place: student.birth_place || '',
         birth_date: student.birth_date || '', phone: student.phone || '', email: student.email || '',
-        address: student.address || '', license_type: student.license_type || 'B',
+        address: student.address || '', ville: student.ville || '', autre_ville: student.autre_ville || '',
+        license_type: student.license_type || 'B',
         registration_date: student.registration_date || getTodayISO(), status: student.status || 'En formation',
         training_start_date: student.training_start_date || student.registration_date || getTodayISO(),
         training_duration_days: student.training_duration_days || 30, offer_id: student.offer_id || '',
@@ -211,6 +213,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
   const allInterestedLicenseOptions = [
     { value: 'A', label: 'Permis A (Moto)' }, { value: 'B', label: 'Permis B (Voiture)' },
     { value: 'C', label: 'Permis C (Camion)' }, { value: 'D', label: 'Permis D (Bus)' },
+    { value: 'E', label: 'Permis E' },
     { value: 'EC', label: 'Permis EC (Remorque)' },
   ];
   const interestedLicenseOptions = allInterestedLicenseOptions.filter(
@@ -259,6 +262,24 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
           <FormField label="Adresse" name="address">
             <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Adresse complète" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
           </FormField>
+          <FormField label="Ville" name="ville">
+            <select name="ville" value={formData.ville} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white">
+              <option value="">-- Sélectionner une ville --</option>
+              {MOROCCAN_CITIES.map((group) => (
+                <optgroup key={group.region} label={group.region}>
+                  {group.cities.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </optgroup>
+              ))}
+              <option value="Autre">Autre</option>
+            </select>
+          </FormField>
+          {formData.ville === 'Autre' && (
+            <FormField label="Préciser la ville" name="autre_ville">
+              <input type="text" name="autre_ville" value={formData.autre_ville} onChange={handleChange} placeholder="Entrez le nom de la ville" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
+            </FormField>
+          )}
           <FormField label="Offre" name="offer_id">
             <select name="offer_id" value={formData.offer_id} onChange={handleOfferChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white">
               <option value="">-- Sélectionner --</option>
