@@ -30,7 +30,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '', cin: '', birth_place: '', birth_date: '', phone: '', email: '', address: '',
-    autre_ville: '',
+    ville: '', autre_ville: '',
     license_type: 'B', registration_date: getTodayISO(), status: 'En formation',
     training_start_date: getTodayISO(), training_duration_days: 30, offer_id: '', total_price: 0,
     interested_licenses: [], reminder_date: '', internal_notes: '',
@@ -54,11 +54,11 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
       if (typeof interestedLicenses === 'string' && interestedLicenses) {
         interestedLicenses = interestedLicenses.split(',').map(l => l.trim());
       }
-      if (student.autre_ville) setAutreVilleEnabled(true);
+      if (student.autre_ville === 'Autre') setAutreVilleEnabled(true);
       setFormData({
         full_name: student.full_name || '', cin: student.cin || '', birth_place: student.birth_place || '',
         birth_date: student.birth_date || '', phone: student.phone || '', email: student.email || '',
-        address: student.address || '', autre_ville: student.autre_ville || '',
+        address: student.address || '', ville: student.ville || '', autre_ville: student.autre_ville || '',
         license_type: student.license_type || 'B',
         registration_date: student.registration_date || getTodayISO(), status: student.status || 'En formation',
         training_start_date: student.training_start_date || student.registration_date || getTodayISO(),
@@ -264,41 +264,25 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
           <FormField label="Adresse" name="address">
             <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Adresse complète" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
           </FormField>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setAutreVilleEnabled((prev) => !prev);
-                if (autreVilleEnabled) setFormData((prev) => ({ ...prev, ville: '', autre_ville: '' }));
-              }}
-              className={`inline-flex items-center gap-2 self-start px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                autreVilleEnabled
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-              }`}
-            >
-              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                autreVilleEnabled ? 'bg-primary-500 border-primary-500' : 'border-gray-300'
-              }`}>
-                {autreVilleEnabled && (
-                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
+          <FormField label="Ville" name="ville" required>
+            <input type="text" name="ville" value={formData.ville} onChange={handleChange} placeholder="Ex: Agadir, Marrakech..." className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
+          </FormField>
+          <div className="flex items-center self-end pb-1">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none group">
+              <span className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${autreVilleEnabled ? 'bg-primary-500 border-primary-500' : 'border-gray-300 group-hover:border-primary-400'}`}>
+                {autreVilleEnabled && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
               </span>
-              Autre ville
-            </button>
-            {autreVilleEnabled && (
               <input
-                type="text"
-                name="autre_ville"
-                value={formData.autre_ville}
-                onChange={handleChange}
-                placeholder="Ex: Agadir, Marrakech..."
-                autoFocus
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                type="checkbox"
+                className="sr-only"
+                checked={autreVilleEnabled}
+                onChange={(e) => {
+                  setAutreVilleEnabled(e.target.checked);
+                  setFormData((prev) => ({ ...prev, autre_ville: e.target.checked ? 'Autre' : '' }));
+                }}
               />
-            )}
+              <span className="text-sm font-medium text-gray-700">Autre ville</span>
+            </label>
           </div>
           <FormField label="Offre" name="offer_id">
             <select name="offer_id" value={formData.offer_id} onChange={handleOfferChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white">
