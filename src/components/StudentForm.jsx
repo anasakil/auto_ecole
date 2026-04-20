@@ -264,7 +264,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
           <FormField label="Adresse" name="address">
             <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Adresse complète" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
           </FormField>
-          <FormField label="Ville" name="ville" required>
+          <FormField label="Ville" name="ville">
             <input type="text" name="ville" value={formData.ville} onChange={handleChange} placeholder="Ex: Agadir, Marrakech..." className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
           </FormField>
           <div className="flex items-center self-end pb-1">
