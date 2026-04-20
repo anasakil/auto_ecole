@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { LICENSE_TYPES, STUDENT_STATUSES, MOROCCAN_CITIES, getTodayISO } from '@/utils/helpers';
+import { LICENSE_TYPES, STUDENT_STATUSES, getTodayISO } from '@/utils/helpers';
 import api from '@/utils/api';
 
 function FormField({ label, name, required, error, children }) {
@@ -36,6 +36,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
     interested_licenses: [], reminder_date: '', internal_notes: '',
   });
 
+  const [autreVilleEnabled, setAutreVilleEnabled] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
   const [cinDocument, setCinDocument] = useState(null);
@@ -53,6 +54,7 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
       if (typeof interestedLicenses === 'string' && interestedLicenses) {
         interestedLicenses = interestedLicenses.split(',').map(l => l.trim());
       }
+      if (student.autre_ville) setAutreVilleEnabled(true);
       setFormData({
         full_name: student.full_name || '', cin: student.cin || '', birth_place: student.birth_place || '',
         birth_date: student.birth_date || '', phone: student.phone || '', email: student.email || '',
@@ -263,23 +265,32 @@ function StudentForm({ student, onSave, onCancel, isLoading = false }) {
             <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Adresse complète" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
           </FormField>
           <FormField label="Ville" name="ville">
-            <select name="ville" value={formData.ville} onChange={handleChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white">
-              <option value="">-- Sélectionner une ville --</option>
-              {MOROCCAN_CITIES.map((group) => (
-                <optgroup key={group.region} label={group.region}>
-                  {group.cities.map((city) => (
-                    <option key={city} value={city}>{city}</option>
-                  ))}
-                </optgroup>
-              ))}
-              <option value="Autre">Autre</option>
-            </select>
+            <input type="text" name="ville" value={formData.ville} onChange={handleChange} placeholder="Ville" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
           </FormField>
-          {formData.ville === 'Autre' && (
-            <FormField label="Préciser la ville" name="autre_ville">
-              <input type="text" name="autre_ville" value={formData.autre_ville} onChange={handleChange} placeholder="Entrez le nom de la ville" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors" />
-            </FormField>
-          )}
+          <div className="flex flex-col justify-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autreVilleEnabled}
+                onChange={(e) => {
+                  setAutreVilleEnabled(e.target.checked);
+                  if (!e.target.checked) setFormData((prev) => ({ ...prev, autre_ville: '' }));
+                }}
+                className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Autre ville</span>
+            </label>
+            {autreVilleEnabled && (
+              <input
+                type="text"
+                name="autre_ville"
+                value={formData.autre_ville}
+                onChange={handleChange}
+                placeholder="Préciser l'autre ville"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+              />
+            )}
+          </div>
           <FormField label="Offre" name="offer_id">
             <select name="offer_id" value={formData.offer_id} onChange={handleOfferChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors bg-white">
               <option value="">-- Sélectionner --</option>
